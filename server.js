@@ -68,13 +68,6 @@ io.on('connection', (socket) => {
         console.log('user disconnected');
     });
     
-
-    socket.on('add object', (data) => {
-        console.log(data);
-        objects.push(data);
-        io.emit('list object', data);
-    });
-
     socket.on('phone video', data => {
         //console.log(data);
         io.emit('computer video', data);

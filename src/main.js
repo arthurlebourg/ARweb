@@ -15,7 +15,6 @@ if (navigator.xr)
     button.addEventListener("click", activateXR);
   });
 
-  const MAX_ANCHORED_OBJECTS = 30;
 
   async function activateXR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
@@ -52,36 +51,8 @@ if (navigator.xr)
       socket.emit("phone video", canvas_truc.toDataURL());
     }
 
-
-
     // To be continued in upcoming steps.
     const scene = new THREE.Scene();
-
-    let anchoredObjects = [];
-
-    function AddAnchoredObject(anchor) {
-      if (anchoredObjects.length < MAX_ANCHORED_OBJECTS) {
-        var data = {
-          object: 'flower',
-          anchor: anchor
-        }
-
-        socket.emit("add object", data);
-      }
-    }
-
-    socket.on("list object", (data) => {
-      console.log(data);
-      if (data.object == 'flower' && flower) {
-        const clone = flower.clone();
-        clone.position.copy(reticle.position);
-        clone.quaternion.copy(reticle.quaternion);
-
-        scene.add(clone);
-
-        anchoredObjects.push(clone);
-      }
-    });
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(10, 15, 10);
@@ -129,13 +100,12 @@ if (navigator.xr)
         const hitTestResults = event.frame.getHitTestResults(hitTestSource);
         if (hitTestResults.length > 0 && reticle) {
           const hitPose = hitTestResults[0].getPose(referenceSpace);
-          let AnchorPose = new XRRigidTransform(hitPose.transform.position, hitPose.transform.orientation);
+          const clone = flower.clone();
+          clone.position.copy(reticle.position);
+          clone.quaternion.copy(reticle.quaternion);
 
-          event.frame.createAnchor(AnchorPose, referenceSpace).then((anchor) => {
-            AddAnchoredObject(anchor);
-          }, (error) => {
-            console.log("anchor error " + error);
-          });
+          scene.add(clone);
+
         }
       }
     });
