@@ -1,42 +1,43 @@
 import * as THREE from 'three'
-import { io } from "socket.io-client";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-
-
-const socket = io();
+import { serverConnection } from './main'
+import { uuid } from './main'
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
     const loader = new GLTFLoader();
     var ready = false;
-    const json_loader = new THREE.ObjectLoader();
     const canvas = document.createElement("canvas");
     document.body.appendChild(canvas);
-    const gl = canvas.getContext("webgl", { xrCompatible: true })!;
+    const xr_context = canvas.getContext("webgl", { xrCompatible: true })!;
 
+    var cam_width = 1280;
+    var cam_height = 720;
 
-    var canvas_truc = document.createElement('canvas');
-    var framebuffer = gl.createFramebuffer();
+    var off_screen_canvas = document.createElement('canvas');
+    var off_screen_context = off_screen_canvas.getContext('2d')!;
+
     // Create a 2D canvas to store the result 
-    function createImageFromTexture(gl : any, texture : any, width : number, height : number) {
-        // Create a framebuffer backed by the texture
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-        var data_truc = new Uint8Array(width * height * 4);
-        canvas_truc.width = width;
-        canvas_truc.height = height;
-        var context_truc = canvas_truc.getContext('2d')!;
-        var imageData = context_truc.createImageData(width, height);
+    // function createImageFromTexture(gl : any, texture : any, width : number, height : number) {
+    //     // Create a framebuffer backed by the texture
+    //     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    //     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    //     var data_truc = new Uint8Array(width * height * 4);
+    //     canvas_truc.width = width;
+    //     canvas_truc.height = height;
+    //     var context_truc = canvas_truc.getContext('2d')!;
+    //     var imageData = context_truc.createImageData(width, height);
 
-        // Read the contents of the framebuffer
-        gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data_truc);
+    //     // Read the contents of the framebuffer
+    //     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data_truc);
 
-        // Copy the pixels to a 2D canvas
-        imageData.data.set(data_truc);
-        context_truc.putImageData(imageData, 0, 0);
+    //     // Copy the pixels to a 2D canvas
+    //     imageData.data.set(data_truc);
+    //     context_truc.putImageData(imageData, 0, 0);
 
-        socket.emit("phone video", canvas_truc.toDataURL());
-    }
+    //     serverConnection.send(JSON.stringify({"video_info" :canvas_truc.toDataURL()}));
+    //     //socket.emit("phone video", canvas_truc.toDataURL());
+    // }
 
     // To be continued in upcoming steps.
     const scene = new THREE.Scene();
@@ -51,7 +52,7 @@ export async function activateAR() {
         alpha: true,
         preserveDrawingBuffer: true,
         canvas: canvas,
-        context: gl
+        context: xr_context
     });
     renderer.autoClear = false;
 
@@ -60,9 +61,9 @@ export async function activateAR() {
     // Initialize a WebXR session using "immersive-ar".
     const session = await navigator.xr!.requestSession("immersive-ar", { requiredFeatures: ['hit-test', 'anchors', 'camera-access'] })!;
     session.updateRenderState({
-        baseLayer: new XRWebGLLayer(session, gl)
+        baseLayer: new XRWebGLLayer(session, xr_context)
     });
-    const glBinding = new XRWebGLBinding(session, gl);
+    const glBinding = new XRWebGLBinding(session, xr_context);
 
     // A 'local' reference space has a native origin that is located
     // near the viewer's position at the time the session was created.
@@ -107,7 +108,7 @@ export async function activateAR() {
         session.requestAnimationFrame(onXRFrame);
 
         // Bind the graphics framebuffer to the baseLayer's framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
+        xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
 
         // Retrieve the pose of the device.
         // XRFrame.getViewerPose can return null while the session attempts to establish tracking.
@@ -115,6 +116,8 @@ export async function activateAR() {
         if (pose) {
             // In mobile AR, we only have one view.
             const view = pose.views[0];
+            cam_width = view.camera.width;
+            cam_height = view.camera.height;
 
             const viewport = session.renderState.baseLayer!.getViewport(view)!;
             renderer.setSize(viewport.width, viewport.height)
@@ -130,7 +133,7 @@ export async function activateAR() {
                 if (!ready) {
                     ready = true;
                     console.log("ready");
-                    socket.emit('ready');
+                    serverConnection.send(JSON.stringify({'ready' : uuid}));
                 }
 
                 const hitPose = hitTestResults[0].getPose(referenceSpace);
@@ -141,8 +144,20 @@ export async function activateAR() {
                 // take raw camera picture
                 // @ts-ignore
                 var camBinding = glBinding.getCameraImage(view.camera)
-                createImageFromTexture(gl, camBinding, view.camera.width / 4, view.camera.height / 4)
-                gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
+                //createImageFromTexture(gl, camBinding, view.camera.width / 4, view.camera.height / 4)
+
+                let off_screen_framebuffer = xr_context.createFramebuffer();
+                xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, off_screen_framebuffer);
+
+                xr_context.framebufferTexture2D(xr_context.FRAMEBUFFER, xr_context.COLOR_ATTACHMENT0, xr_context.TEXTURE_2D, camBinding, 0);
+                var data_off_screen = new Uint8Array(cam_width * cam_height * 4);
+                var off_screen_image = off_screen_context.createImageData(cam_width, cam_height);
+
+                xr_context.readPixels(0, 0, cam_width, cam_height, xr_context.RGBA, xr_context.UNSIGNED_BYTE, data_off_screen);
+                off_screen_image.data.set(data_off_screen);
+                off_screen_context.putImageData(off_screen_image, 0, 0);
+
+                xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
 
             }
             camera.updateMatrixWorld(true);
@@ -153,4 +168,6 @@ export async function activateAR() {
     }
     session.requestAnimationFrame(onXRFrame);
     console.log("XR session started");
+    
+    return off_screen_canvas.captureStream(30)
 }

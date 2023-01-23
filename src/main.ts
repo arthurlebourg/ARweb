@@ -1,11 +1,11 @@
 import './style.css'
-//import { activateAR } from './ar_side';
+import { activateAR } from './client_ar';
 
 var localStream: any;
 var remoteVideo: any;
 var peerConnection: any;
-var uuid: string;
-var serverConnection: any;
+export var uuid: string;
+export var serverConnection: any;
 var localVideo : any;
 
 
@@ -39,6 +39,7 @@ function start(isCaller : boolean) {
   peerConnection.addStream(localStream);
 
   if(isCaller) {
+    peerConnection.addStream(localStream);
     peerConnection.createOffer().then(createdDescription).catch(errorHandler);
   }
 }
@@ -46,7 +47,7 @@ function start(isCaller : boolean) {
 function gotMessageFromServer(message : any) {
   if(!peerConnection) start(false);
 
-  var signal = JSON.parse(message.data);
+  let signal = JSON.parse(message.data);
 
 
   // Ignore messages from ourself
@@ -103,22 +104,43 @@ document.addEventListener("DOMContentLoaded", () => {
   localVideo = document.getElementById('localVideo');
   remoteVideo = document.getElementById('remoteVideo');
 
-  var constraints = {
-    video: true,
+  let constraints = {
+    video: true,//{ width: 1280, height: 720 }, { frameRate: { ideal: 10, max: 15 } }, { facingMode: (front? "user" : "environment") } 
     audio: false,
   };
 
-  if(navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia(constraints).then(getUserMediaSuccess).catch(errorHandler);
-  } else {
-    alert('Your browser does not support getUserMedia API');
-  }
-  var button = document.createElement("input");
-  button.type = "button";
-  button.value = "Start Video";
-  button.onclick = function() { start(true); };
-  document.body.appendChild(button);
+  if (navigator.xr)
+  {
+    let button_AR = document.createElement("input");
+    button_AR.type = "button";
+    button_AR.value = "Start AR";
+    button_AR.onclick = async () => {
+      let stream = await activateAR()
 
+      getUserMediaSuccess(stream);
+
+      start(true);
+    };
+    
+    document.body.appendChild(button_AR);
+  }
+  if (navigator.mediaDevices.getUserMedia)
+  {
+    let button = document.createElement("input");
+    button.type = "button";
+    button.value = "Start front camera Video";
+    button.onclick = async function () {
+      let stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      getUserMediaSuccess(stream)
+      
+      start(true);
+    };
+
+    document.body.appendChild(button);
+  } else {
+    alert('Your browser does not support getUserMedia API nor WebXR');
+  }
 });
 
 
