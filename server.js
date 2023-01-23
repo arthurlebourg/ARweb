@@ -1,26 +1,48 @@
 // server.js
-import fs from 'fs';
 import express from 'express';
-import path, { resolve } from 'path';
+import path from 'path';
 import serveStatic from 'serve-static';
+//import bodyParser from 'body-parser';
+import * as WebSocket from 'ws';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
-import bodyParser from 'body-parser';
 
 var app = express();
 
 var __dirname = path.resolve();
 
 app.use(serveStatic(__dirname + "/dist"));
-app.use(bodyParser.json());
-var port = process.env.PORT || 5000;
-var hostname = '127.0.0.1';
+//app.use(bodyParser.json());
 
-app.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
+const server = createServer(app);
+
+const wss = new WebSocket.WebSocketServer({ server });
+
+console.log('Websocket server started');
+
+wss.on('connection', function (ws) {
+    console.log('Client connected');
+    ws.on('message', function (message) {
+        // Broadcast any received message to all clients
+        //console.log('received: %s', message);
+        
+        wss.broadcast(message);
+    });
 });
 
-var server = createServer(app);
+wss.broadcast = function (data) {
+    this.clients.forEach(function (client) {
+        if (client.readyState === 1) {
+            client.send(data.toString());
+        }
+    });
+};
+
+server.listen(process.env.PORT || 3000, () => {
+    console.log(`Server running at http://127.0.0.1:${server.address().port}/`);
+});
+
+
+/*var server = createServer(app);
 var port = process.env.PORT || 3000;
 server.listen(port);
 server.on('listening', onListening);
@@ -73,4 +95,4 @@ io.on('connection', (socket) => {
         io.emit('computer video', data);
 
     });
-});
+});*/
