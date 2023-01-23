@@ -104,19 +104,18 @@ document.addEventListener("DOMContentLoaded", () => {
   localVideo = document.getElementById('localVideo');
   remoteVideo = document.getElementById('remoteVideo');
 
-  let constraints = {
-    video: true,//{ width: 1280, height: 720 }, { frameRate: { ideal: 10, max: 15 } }, { facingMode: (front? "user" : "environment") } 
-    audio: false,
-  };
-
   if (navigator.xr)
   {
+    const displayMediaOptions = {
+      video: true,
+      audio: false
+    };
+
     let button_AR = document.createElement("input");
     button_AR.type = "button";
     button_AR.value = "Start AR";
     button_AR.onclick = async () => {
       let stream = await activateAR()
-
       getUserMediaSuccess(stream);
 
       start(true);
@@ -126,6 +125,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (navigator.mediaDevices.getUserMedia)
   {
+    let constraints = {
+      video: true,//{ width: 1280, height: 720 }, { frameRate: { ideal: 10, max: 15 } }, { facingMode: (front? "user" : "environment") } 
+      audio: false,
+    };
+
     let button = document.createElement("input");
     button.type = "button";
     button.value = "Start front camera Video";
