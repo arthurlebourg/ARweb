@@ -42,14 +42,12 @@ function start(isCaller: boolean) {
     dataChannel.send('Hi!');
   }
   dataChannel.onmessage = (event : any) => {
-    console.log('penis: ' + event.data);
-  }
-
-  peerConnection.ondatachannel = (event : any) => {
-    const receiveChannel = event.channel;
-    receiveChannel.onmessage = (event : any) => {
-      console.log('bite: ' + event.data);
+    console.log('Received: ' + event.data);
+    let data = JSON.parse(event.data)
+    if (data.click) {
+       
     }
+      
   }
 
   if (isCaller) {
@@ -142,18 +140,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       getUserMediaSuccess(stream)
 
+      remoteVideo.onclick = function clickEvent(e : any) {
+        // e = Mouse click event.
+        var rect = e.target.getBoundingClientRect();
+        var x = e.clientX - rect.left; //x position within the element.
+        var y = e.clientY - rect.top;  //y position within the element.
+        console.log("Left? : " + x + " ; Top? : " + y + ".");
+        dataChannel.send(JSON.stringify({click: {x: x, y: y}}))
+      }
+
       start(true);
     };
     document.body.appendChild(button);
     
-    let button_click = document.createElement("input");
-    button_click.type = "button";
-    button_click.value = "Click";
-    button_click.onclick = function () {
-      dataChannel.send("click");
-    };
-    document.body.appendChild(button_click);
-
   } else {
     alert('Your browser does not support getUserMedia API nor WebXR');
   }

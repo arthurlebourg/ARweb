@@ -79,3 +79,10 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+.clickable {
+  margin-top: 20px;
+  margin-left: 100px;
+  border: 1px solid black;
+  cursor: pointer;
+}

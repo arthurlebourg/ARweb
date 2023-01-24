@@ -3,16 +3,27 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { serverConnection } from './main'
 import { uuid } from './main'
 
+const loader = new GLTFLoader();
+const scene = new THREE.Scene();
+let reticle: any;
+loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
+    reticle = gltf.scene;
+    reticle.visible = false;
+    scene.add(reticle);
+})
+
+
+export function addObject()
+{
+
+}
+
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
-    const loader = new GLTFLoader();
-    var ready = false;
+    let ready = false;
     const canvas = document.createElement("canvas");
     document.body.appendChild(canvas);
     const xr_context : WebGL2RenderingContext = canvas.getContext("webgl2", { xrCompatible: true, antialias : false})!;
-
-    // To be continued in upcoming steps.
-    const scene = new THREE.Scene();
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(10, 15, 10);
@@ -30,7 +41,7 @@ export async function activateAR() {
     const camera = new THREE.PerspectiveCamera();
     camera.matrixAutoUpdate = false;
     // Initialize a WebXR session using "immersive-ar".
-    const session = await navigator.xr!.requestSession("immersive-ar", { requiredFeatures: ['hit-test', 'anchors', 'camera-access'] })!;
+    const session = await navigator.xr!.requestSession("immersive-ar", { requiredFeatures: ['local', 'hit-test', 'anchors', 'camera-access'] })!;
     session.updateRenderState({
         baseLayer: new XRWebGLLayer(session, xr_context)
     });
@@ -40,38 +51,44 @@ export async function activateAR() {
     // near the viewer's position at the time the session was created.
     const referenceSpace = await session.requestReferenceSpace('local');
 
-    let reticle : any;
-    loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
-        reticle = gltf.scene;
-        reticle.visible = false;
-        scene.add(reticle);
-    })
-
-    let flower : any;
-    loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/sunflower/sunflower.gltf", function (gltf) {
-        flower = gltf.scene;
-    });
-
-    session.addEventListener("select", (event) => {
-        if (flower) {
-            const hitTestResults = event.frame.getHitTestResults(hitTestSource);
-            if (hitTestResults.length > 0 && reticle) {
-                const hitPose = hitTestResults[0].getPose(referenceSpace);
-                const clone = reticle.clone();
-                clone.position.copy(reticle.position);
-                clone.quaternion.copy(reticle.quaternion);
-
-                scene.add(clone);
-            }
-        }
-    });
-
-    // A 'local' reference space has a native origin that is located
-    // near the viewer's position at the time the session was created.
     // Create another XRReferenceSpace that has the viewer as the origin.
     const viewerSpace = await session.requestReferenceSpace('viewer');
     // Perform hit testing using the viewer as origin.
     const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
+    let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
+
+
+    session.addEventListener("select", async (event) => {
+        if (reticle) {
+            //console.log(event)
+            let user_x = event.inputSource.gamepad!.axes[0];
+            let user_y = event.inputSource.gamepad!.axes[1];
+            console.log(user_x, user_y);
+
+            let hitTestOptionsInit = {
+                profile: 'generic-touchscreen',
+                offsetRay: new XRRay({y: -user_y, x: user_x})
+            };
+
+            session.requestHitTestSourceForTransientInput!(hitTestOptionsInit)!.then((hitTestSource) => {
+                transientInputHitTestSource = hitTestSource;
+                // Store some additional data on just created hit test source
+                // by extending the object:
+                // @ts-ignore
+                transientInputHitTestSource.context = { options: hitTestOptionsInit };
+            })
+
+            /*const hitTestResults = event.frame.getHitTestResults(hitTestSource);
+            if (hitTestResults.length > 0) {
+                const hitPose : XRPose = hitTestResults[0].getPose(referenceSpace)!;
+                const clone = reticle.clone();
+                clone.position.copy(hitPose.transform.position);
+                clone.quaternion.copy(hitPose.transform.orientation);
+
+                scene.add(clone);
+            }*/
+        }
+    });
 
     // Create a render loop that allows us to draw on the AR view.
     const onXRFrame = (time : number, frame : any) => {
@@ -111,6 +128,23 @@ export async function activateAR() {
                 reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z)
                 reticle.updateMatrixWorld(true);
             }
+            
+            let hitTestResultsPerInputSource = frame.getHitTestResultsForTransientInput(transientInputHitTestSource);
+
+            if (hitTestResultsPerInputSource.length > 0 && reticle) {
+                let hitTestResult = hitTestResultsPerInputSource[0];
+                let hitTestResults = hitTestResult.results;
+                if (hitTestResults.length > 0) {
+                    console.log("hit");
+                    let hitPose = hitTestResults[0].getPose(referenceSpace);
+                    const clone = reticle.clone();
+                    clone.position.copy(hitPose.transform.position);
+                    clone.quaternion.copy(hitPose.transform.orientation);
+
+                    scene.add(clone);
+                }
+            }
+
             // @ts-ignore
             var raw_camera_texture = xr_binding.getCameraImage(view.camera)
             camera.updateMatrixWorld(true);
