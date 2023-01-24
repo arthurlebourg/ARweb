@@ -1,5 +1,6 @@
 import './style.css'
 import { activateAR } from './client_ar';
+import { canvas } from './client_ar';
 
 var localStream: any;
 var remoteVideo: any;
@@ -31,6 +32,19 @@ function getUserMediaSuccess(stream: any) {
   localVideo.srcObject = stream;
 }
 
+function click(x : number, y : number)
+{
+    var ev = new MouseEvent('click', {
+        'view': window,
+        'bubbles': true,
+        'cancelable': true,
+        'screenX': x,
+        'screenY': y
+    });
+
+    canvas.dispatchEvent(ev);
+}
+
 function start(isCaller: boolean) {
   console.log('isCaller : ' + isCaller)
   peerConnection = new RTCPeerConnection(peerConnectionConfig);
@@ -39,13 +53,14 @@ function start(isCaller: boolean) {
   peerConnection.addStream(localStream);
   dataChannel = peerConnection.createDataChannel("chat", { negotiated: true, id: 0 });
   dataChannel.onopen = (event : any) => {
-    dataChannel.send('Hi!');
   }
   dataChannel.onmessage = (event : any) => {
     console.log('Received: ' + event.data);
     let data = JSON.parse(event.data)
+    let x = data.click.x;
+    let y = data.click.y;
     if (data.click) {
-       
+      click(x, y)
     }
       
   }

@@ -3,25 +3,23 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { serverConnection } from './main'
 import { uuid } from './main'
 
-const loader = new GLTFLoader();
-const scene = new THREE.Scene();
-let reticle: any;
-loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
-    reticle = gltf.scene;
-    reticle.visible = false;
-    scene.add(reticle);
-})
-
-
-export function addObject()
-{
-
-}
+export const canvas = document.createElement("canvas");
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
+
+    const loader = new GLTFLoader();
+    const scene = new THREE.Scene();
+    let reticle: any;
+    loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
+        reticle = gltf.scene;
+        reticle.visible = false;
+        scene.add(reticle);
+    })
+
+    canvas.addEventListener('pointerdown', console.log);
+
     let ready = false;
-    const canvas = document.createElement("canvas");
     document.body.appendChild(canvas);
     const xr_context : WebGL2RenderingContext = canvas.getContext("webgl2", { xrCompatible: true, antialias : false})!;
 
@@ -41,7 +39,11 @@ export async function activateAR() {
     const camera = new THREE.PerspectiveCamera();
     camera.matrixAutoUpdate = false;
     // Initialize a WebXR session using "immersive-ar".
-    const session = await navigator.xr!.requestSession("immersive-ar", { requiredFeatures: ['local', 'hit-test', 'anchors', 'camera-access'] })!;
+    const session = await navigator.xr!.requestSession("immersive-ar", {
+        requiredFeatures: ['hit-test', 'anchors', 'camera-access'],
+    });
+
+
     session.updateRenderState({
         baseLayer: new XRWebGLLayer(session, xr_context)
     });
@@ -54,11 +56,15 @@ export async function activateAR() {
     // Create another XRReferenceSpace that has the viewer as the origin.
     const viewerSpace = await session.requestReferenceSpace('viewer');
     // Perform hit testing using the viewer as origin.
-    const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace, offsetRay: new XRRay({ x: 0.0,y: -0.5}) })!;
+    const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
     let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
 
+    let x = 0
+    let y = 0
 
-    session.addEventListener("select", async (event) => {
+    session.addEventListener("select", async (event : any) => {
+        x = event.inputSource.gamepad!.axes[0];
+        y = event.inputSource.gamepad!.axes[1];
         /*if (reticle) {
             //console.log(event)
             let user_x = event.inputSource.gamepad!.axes[0];
@@ -66,11 +72,14 @@ export async function activateAR() {
             console.log(user_x, user_y);
         }*/
     });
+    
 
     // Create a render loop that allows us to draw on the AR view.
     const onXRFrame = (time : number, frame : any) => {
+        //session.dispatchEvent(new XRInputSourceEvent("select", {}));
         // Queue up the next draw request.
         session.requestAnimationFrame(onXRFrame);
+
 
         // Bind the graphics framebuffer to the baseLayer's framebuffer
         xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
@@ -83,6 +92,7 @@ export async function activateAR() {
             // In mobile AR, we only have one view.
             const view = pose.views[0];
 
+            //const depthInfo = frame.getDepthInformation(view);
             const viewport = session.renderState.baseLayer!.getViewport(view)!;
             renderer.setSize(viewport.width, viewport.height)
 
@@ -116,6 +126,9 @@ export async function activateAR() {
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
                     const clone = reticle.clone();
                     clone.position.copy(hitPose.transform.position);
+                    //console.log(hitPose.transform.position);
+                    //const depthInMeters = depthInfo.getDepthInMeters(x, y);
+                    //console.log("depth : " + depthInMeters);
                     clone.quaternion.copy(hitPose.transform.orientation);
 
                     scene.add(clone);
