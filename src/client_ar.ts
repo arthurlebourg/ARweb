@@ -54,40 +54,17 @@ export async function activateAR() {
     // Create another XRReferenceSpace that has the viewer as the origin.
     const viewerSpace = await session.requestReferenceSpace('viewer');
     // Perform hit testing using the viewer as origin.
-    const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
+    const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace, offsetRay: new XRRay({ x: 0.0,y: -0.5}) })!;
     let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
 
 
     session.addEventListener("select", async (event) => {
-        if (reticle) {
+        /*if (reticle) {
             //console.log(event)
             let user_x = event.inputSource.gamepad!.axes[0];
             let user_y = event.inputSource.gamepad!.axes[1];
             console.log(user_x, user_y);
-
-            let hitTestOptionsInit = {
-                profile: 'generic-touchscreen',
-                offsetRay: new XRRay({y: -user_y, x: user_x})
-            };
-
-            session.requestHitTestSourceForTransientInput!(hitTestOptionsInit)!.then((hitTestSource) => {
-                transientInputHitTestSource = hitTestSource;
-                // Store some additional data on just created hit test source
-                // by extending the object:
-                // @ts-ignore
-                transientInputHitTestSource.context = { options: hitTestOptionsInit };
-            })
-
-            /*const hitTestResults = event.frame.getHitTestResults(hitTestSource);
-            if (hitTestResults.length > 0) {
-                const hitPose : XRPose = hitTestResults[0].getPose(referenceSpace)!;
-                const clone = reticle.clone();
-                clone.position.copy(hitPose.transform.position);
-                clone.quaternion.copy(hitPose.transform.orientation);
-
-                scene.add(clone);
-            }*/
-        }
+        }*/
     });
 
     // Create a render loop that allows us to draw on the AR view.
@@ -126,6 +103,7 @@ export async function activateAR() {
                 const hitPose = hitTestResults[0].getPose(referenceSpace);
                 reticle.visible = true;
                 reticle.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z)
+                reticle.quaternion.set(hitPose.transform.orientation.x, hitPose.transform.orientation.y, hitPose.transform.orientation.z, hitPose.transform.orientation.w)
                 reticle.updateMatrixWorld(true);
             }
             
@@ -135,7 +113,6 @@ export async function activateAR() {
                 let hitTestResult = hitTestResultsPerInputSource[0];
                 let hitTestResults = hitTestResult.results;
                 if (hitTestResults.length > 0) {
-                    console.log("hit");
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
                     const clone = reticle.clone();
                     clone.position.copy(hitPose.transform.position);
