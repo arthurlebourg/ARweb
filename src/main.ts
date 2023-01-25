@@ -44,9 +44,9 @@ function start(isCaller: boolean) {
   dataChannel.onmessage = (event : any) => {
     console.log('Received: ' + event.data);
     let data = JSON.parse(event.data)
-    let x = data.click.x;
-    let y = data.click.y;
     if (data.click) {
+      let x = data.click.x;
+      let y = data.click.y;
       place_object(x, y)
     }
       

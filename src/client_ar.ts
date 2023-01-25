@@ -53,7 +53,7 @@ export async function activateAR() {
     canvas.addEventListener('pointerdown', console.log);
 
     let ready = false;
-    document.body.appendChild(canvas);
+    //document.body.appendChild(canvas);
     const xr_context : WebGL2RenderingContext = canvas.getContext("webgl2", { xrCompatible: true, antialias : false})!;
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
@@ -222,7 +222,6 @@ export async function activateAR() {
             camera.updateMatrixWorld(true);
 
             if (!ready) {
-                console.log("not ready");
                 const width = session.renderState.baseLayer!.framebufferWidth;
                 const height = session.renderState.baseLayer!.framebufferHeight;
                 xr_context.enable(xr_context.SCISSOR_TEST);
