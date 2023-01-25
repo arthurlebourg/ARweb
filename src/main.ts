@@ -27,9 +27,12 @@ function createUUID() {
   return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
 }
 
-function getUserMediaSuccess(stream: any) {
+function getUserMediaSuccess(stream: any, is_AR : boolean = false) {
   localStream = stream;
-  localVideo.srcObject = stream;
+  if (is_AR)
+  {
+    localVideo.srcObject = stream;
+  }
 }
 
 function start(isCaller: boolean) {
@@ -124,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     button_AR.value = "Start back camera with AR";
     button_AR.onclick = async () => {
       let stream = await activateAR()
-      getUserMediaSuccess(stream);
+      getUserMediaSuccess(stream, true);
 
       start(true);
     };
