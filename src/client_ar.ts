@@ -33,8 +33,6 @@ export async function activateAR() {
     document.body.appendChild(ardiv)
     createApp(AROverlay).mount('#ar_overlay')!
 
-    document.body.removeChild(document.getElementById("localVideo")!);
-    document.body.removeChild(document.getElementById("remoteVideo")!);
     let buttons = document.getElementsByClassName("start_button");
     while (buttons.length > 0) {
         document.body.removeChild(buttons[0]);

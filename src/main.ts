@@ -112,8 +112,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   serverConnection = new WebSocket('ws://' + window.location.host + '/');
   serverConnection.onmessage = gotMessageFromServer;
 
-  localVideo = document.getElementById('localVideo');
-  remoteVideo = document.getElementById('remoteVideo');
+  //localVideo = document.getElementById('localVideo');
+  //remoteVideo = document.getElementById('remoteVideo');
 
   // check if ar is available
 
@@ -142,11 +142,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     button.value = "Start front camera Video";
     button.className = "start_button"
     button.onclick = async function () {
-      let stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // < video id = "localVideo" autoplay muted style = "width:40%;" > </video>
+      // < video id = "remoteVideo" class="clickable" autoplay style = "width:40%;" > </video>
 
-      getUserMediaSuccess(stream)
+      localVideo = document.createElement("video");
+      localVideo.id = "localVideo";
+      localVideo.autoplay = true;
+      localVideo.muted = true;
+      localVideo.style.width = "40%";
 
-      remoteVideo.onclick = function clickEvent(e : any) {
+      remoteVideo = document.createElement("video");
+      remoteVideo.id = "remoteVideo";
+      remoteVideo.autoplay = true;
+      remoteVideo.style.width = "40%";
+      remoteVideo.className = "clickable";
+
+      document.body.appendChild(localVideo);
+      document.body.appendChild(remoteVideo);
+
+      remoteVideo.onclick = function clickEvent(e: any) {
         // e = Mouse click event.
         var rect = e.target.getBoundingClientRect();
         console.log(e.clientX + " ; " + e.clientY)
@@ -157,13 +171,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         y = (y / rect.height) * 2 - 1;
         console.log("Left? : " + x + " ; Top? : " + y + ".");
 
-        dataChannel.send(JSON.stringify({click: {x: x, y: y}}))
+        dataChannel.send(JSON.stringify({ click: { x: x, y: y } }))
       }
+
+      let stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      getUserMediaSuccess(stream)
 
       start(true);
     };
     document.body.appendChild(button);
-    
+
   } else {
     alert('Your browser does not support getUserMedia API nor WebXR');
   }
