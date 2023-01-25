@@ -3,10 +3,42 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { serverConnection } from './main'
 import { uuid } from './main'
 
-export const canvas = document.createElement("canvas");
+import { createApp } from 'vue';
+import AROverlay from './AR_overlay.vue';
+
+let remote_place_object : boolean = false;
+let x : number = 0
+let y : number= 0
+
+export function place_object(x : number, y : number)
+{
+    remote_place_object = true;
+    x = x;
+    y = y;
+}
+
+
+function depthSample(linearDepth : number, camera: THREE.PerspectiveCamera)
+{
+    let nonLinearDepth = (camera.far + camera.near - 2.0 * camera.near * camera.far / linearDepth) / (camera.far - camera.near);
+    nonLinearDepth = (nonLinearDepth + 1.0) / 2.0;
+    return nonLinearDepth;
+}
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
+
+    var ardiv = document.createElement("div")
+    ardiv.id = "ar_overlay"
+    document.body.appendChild(ardiv)
+    createApp(AROverlay).mount('#ar_overlay')!
+
+    document.body.removeChild(document.getElementById("localVideo")!);
+    document.body.removeChild(document.getElementById("remoteVideo")!);
+    let buttons = document.getElementsByClassName("start_button");
+    while (buttons.length > 0) {
+        document.body.removeChild(buttons[0]);
+    }
 
     const loader = new GLTFLoader();
     const scene = new THREE.Scene();
@@ -17,6 +49,7 @@ export async function activateAR() {
         scene.add(reticle);
     })
 
+    const canvas = document.createElement("canvas");
     canvas.addEventListener('pointerdown', console.log);
 
     let ready = false;
@@ -38,20 +71,31 @@ export async function activateAR() {
 
     const camera = new THREE.PerspectiveCamera();
     camera.matrixAutoUpdate = false;
+
+    var overlay = document.getElementById("ar_overlay")!;
+
     // Initialize a WebXR session using "immersive-ar".
     const session = await navigator.xr!.requestSession("immersive-ar", {
-        requiredFeatures: ['hit-test', 'camera-access', 'depth-sensing'],
+        requiredFeatures: ['hit-test', 'camera-access', 'depth-sensing', 'dom-overlay'],
+        domOverlay: {
+            root: overlay
+        },
         // @ts-ignore
         depthSensing: {
             usagePreference: ["cpu-optimized", "gpu-optimized"],
             dataFormatPreference: ["luminance-alpha", "float32"],
-          },
+        },
     });
 
     // @ts-ignore
     console.log(session.depthUsage);
     // @ts-ignore
-    console.log(session.depthFormat);
+    console.log(session.depthDataFormat);
+
+    if (session.domOverlayState) {
+        document.getElementById("session-info")!.innerHTML =
+            "DOM Overlay type: " + session.domOverlayState.type;
+    }
 
 
     session.updateRenderState({
@@ -69,10 +113,7 @@ export async function activateAR() {
     const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
     let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
 
-    let x = 0
-    let y = 0
-
-    session.addEventListener("select", async (event : any) => {
+    /*session.addEventListener("select", async (event : any) => {
         x = event.inputSource.gamepad!.axes[0];
         y = event.inputSource.gamepad!.axes[1];
         /*if (reticle) {
@@ -80,8 +121,8 @@ export async function activateAR() {
             let user_x = event.inputSource.gamepad!.axes[0];
             let user_y = event.inputSource.gamepad!.axes[1];
             console.log(user_x, user_y);
-        }*/
-    });
+        }* /
+    });*/
     
 
     // Create a render loop that allows us to draw on the AR view.
@@ -97,12 +138,11 @@ export async function activateAR() {
         // Retrieve the pose of the device.
         // XRFrame.getViewerPose can return null while the session attempts to establish tracking.
         var pose = frame.getViewerPose(referenceSpace);
-
+    
         if (pose) {
             // In mobile AR, we only have one view.
             const view = pose.views[0];
 
-            const depthInfo = frame.getDepthInformation(view);
             const viewport = session.renderState.baseLayer!.getViewport(view)!;
             renderer.setSize(viewport.width, viewport.height)
 
@@ -118,6 +158,7 @@ export async function activateAR() {
                     ready = true;
                     console.log("ready");
                     serverConnection.send(JSON.stringify({'ready' : uuid}));
+                    document.getElementById("calibrate")!.style.display = "none";
                 }
 
                 const hitPose = hitTestResults[0].getPose(referenceSpace);
@@ -137,44 +178,63 @@ export async function activateAR() {
                     const clone = reticle.clone();
                     clone.position.copy(hitPose.transform.position);
 
-                    // log distance bewteen camera and hitPose
-                    //console.log(camera.position.distanceTo(hitPose.transform.position));
-                    //console.log("reticle :", hitPose.transform.position);
                     clone.quaternion.copy(hitPose.transform.orientation);
 
                     scene.add(clone);
-                    //console.log("x : " + x + " y : " + y)
-                    const depthInMeters = depthInfo.getDepthInMeters(x, y) * 1.5;
-
-                    //console.log("depth : " + depthInMeters);
-                    
-                    let projectionMatrix = camera.projectionMatrix;
-                    
-                    let A = projectionMatrix.elements[10];
-                    let B = projectionMatrix.elements[11];
-
-                    let depth = 0.5*(-A * depthInMeters + B) / depthInMeters + 0.5;
-                    //console.log("depth : " + depth);
-                    //console.log("depth : " + depthInMeters);
-
-                    // create a three js box of color green
-                    const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                    const testclone = new THREE.Mesh(geometry, material);
-                    let pos = new THREE.Vector3(x, y, depth);
-                    pos.unproject(camera);
-                    testclone.position.copy(pos);
-                    scene.add(testclone);
                     
                 }
+            }
+            
+
+            if (remote_place_object)
+            {
+                const depthInfo = frame.getDepthInformation(view);
+                const depthInMeters = depthInfo.getDepthInMeters(x, y);
+
+                console.log("depth : " + depthInMeters);
+
+                let projectionMatrix = camera.projectionMatrix;
+
+                let A = projectionMatrix.elements[10];
+                let B = projectionMatrix.elements[11];
+
+                let depth = 0.5 * (-A * depthInMeters + B) / depthInMeters + 0.5;
+
+                //let depth = depthSample(depthInMeters, camera)
+                //console.log("depth : " + depth);
+                //console.log("depth : " + depthInMeters);
+
+                // create a three js box of color green
+                const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const testclone = new THREE.Mesh(geometry, material);
+                let pos = new THREE.Vector3(x, y, depth);
+                pos.unproject(camera);
+                testclone.position.copy(pos);
+                scene.add(testclone);
+
+                remote_place_object = false;
+
             }
 
             // @ts-ignore
             var raw_camera_texture = xr_binding.getCameraImage(view.camera)
             camera.updateMatrixWorld(true);
 
-            // Render the scene with THREE.WebGLRenderer.
-            renderer.render(scene, camera)
+            if (!ready) {
+                console.log("not ready");
+                const width = session.renderState.baseLayer!.framebufferWidth;
+                const height = session.renderState.baseLayer!.framebufferHeight;
+                xr_context.enable(xr_context.SCISSOR_TEST);
+                xr_context.scissor(width / 4, height / 4, width / 2, height / 2);
+                xr_context.clearColor(0.5, 0.0, 0.0, 0.5);
+                xr_context.clear(xr_context.COLOR_BUFFER_BIT | xr_context.DEPTH_BUFFER_BIT);
+                xr_context.disable(xr_context.SCISSOR_TEST);
+            }
+            else {
+                // Render the scene with THREE.WebGLRenderer.
+                renderer.render(scene, camera)
+            }
 
             // render the scene with raw camera texture as backaground to CPU canvas
             xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, null);

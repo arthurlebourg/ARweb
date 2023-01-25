@@ -1,6 +1,6 @@
 import './style.css'
 import { activateAR } from './client_ar';
-import { canvas } from './client_ar';
+import { place_object } from './client_ar';
 
 var localStream: any;
 var remoteVideo: any;
@@ -32,19 +32,6 @@ function getUserMediaSuccess(stream: any) {
   localVideo.srcObject = stream;
 }
 
-function click(x : number, y : number)
-{
-    var ev = new MouseEvent('click', {
-        'view': window,
-        'bubbles': true,
-        'cancelable': true,
-        'screenX': x,
-        'screenY': y
-    });
-
-    canvas.dispatchEvent(ev);
-}
-
 function start(isCaller: boolean) {
   console.log('isCaller : ' + isCaller)
   peerConnection = new RTCPeerConnection(peerConnectionConfig);
@@ -60,7 +47,7 @@ function start(isCaller: boolean) {
     let x = data.click.x;
     let y = data.click.y;
     if (data.click) {
-      click(x, y)
+      place_object(x, y)
     }
       
   }
@@ -119,7 +106,7 @@ function errorHandler(error: any) {
   console.log(error);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   uuid = createUUID();
   console.log('UUID : ' + uuid);
   serverConnection = new WebSocket('ws://' + window.location.host + '/');
@@ -128,10 +115,13 @@ document.addEventListener("DOMContentLoaded", () => {
   localVideo = document.getElementById('localVideo');
   remoteVideo = document.getElementById('remoteVideo');
 
-  if (navigator.xr) {
+  // check if ar is available
+
+  if (navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')) {
     let button_AR = document.createElement("input");
     button_AR.type = "button";
-    button_AR.value = "Start AR";
+    button_AR.className = "start_button"
+    button_AR.value = "Start back camera with AR";
     button_AR.onclick = async () => {
       let stream = await activateAR()
       getUserMediaSuccess(stream);
@@ -150,6 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let button = document.createElement("input");
     button.type = "button";
     button.value = "Start front camera Video";
+    button.className = "start_button"
     button.onclick = async function () {
       let stream = await navigator.mediaDevices.getUserMedia(constraints);
 
@@ -158,9 +149,14 @@ document.addEventListener("DOMContentLoaded", () => {
       remoteVideo.onclick = function clickEvent(e : any) {
         // e = Mouse click event.
         var rect = e.target.getBoundingClientRect();
+        console.log(e.clientX + " ; " + e.clientY)
         var x = e.clientX - rect.left; //x position within the element.
         var y = e.clientY - rect.top;  //y position within the element.
+        // normalise to -1 - 1
+        x = (x / rect.width) * 2 - 1;
+        y = (y / rect.height) * 2 - 1;
         console.log("Left? : " + x + " ; Top? : " + y + ".");
+
         dataChannel.send(JSON.stringify({click: {x: x, y: y}}))
       }
 

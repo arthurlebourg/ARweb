@@ -24,6 +24,10 @@ wss.on('connection', function (ws) {
     ws.on('message', function (message) {
         // Broadcast any received message to all clients
         //console.log('received: %s', message);
+        var data = JSON.parse(message);
+        if (data['ready']) {
+            console.log('Player ' + data['ready'] + ' is ready for AR');
+        }
         
         wss.broadcast(message);
     });
