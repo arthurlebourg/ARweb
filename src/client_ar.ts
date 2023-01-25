@@ -40,8 +40,18 @@ export async function activateAR() {
     camera.matrixAutoUpdate = false;
     // Initialize a WebXR session using "immersive-ar".
     const session = await navigator.xr!.requestSession("immersive-ar", {
-        requiredFeatures: ['hit-test', 'anchors', 'camera-access'],
+        requiredFeatures: ['hit-test', 'camera-access', 'depth-sensing'],
+        // @ts-ignore
+        depthSensing: {
+            usagePreference: ["cpu-optimized", "gpu-optimized"],
+            dataFormatPreference: ["luminance-alpha", "float32"],
+          },
     });
+
+    // @ts-ignore
+    console.log(session.depthUsage);
+    // @ts-ignore
+    console.log(session.depthFormat);
 
 
     session.updateRenderState({
@@ -92,7 +102,7 @@ export async function activateAR() {
             // In mobile AR, we only have one view.
             const view = pose.views[0];
 
-            //const depthInfo = frame.getDepthInformation(view);
+            const depthInfo = frame.getDepthInformation(view);
             const viewport = session.renderState.baseLayer!.getViewport(view)!;
             renderer.setSize(viewport.width, viewport.height)
 
@@ -126,12 +136,36 @@ export async function activateAR() {
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
                     const clone = reticle.clone();
                     clone.position.copy(hitPose.transform.position);
-                    //console.log(hitPose.transform.position);
-                    //const depthInMeters = depthInfo.getDepthInMeters(x, y);
-                    //console.log("depth : " + depthInMeters);
+
+                    // log distance bewteen camera and hitPose
+                    //console.log(camera.position.distanceTo(hitPose.transform.position));
+                    //console.log("reticle :", hitPose.transform.position);
                     clone.quaternion.copy(hitPose.transform.orientation);
 
                     scene.add(clone);
+                    //console.log("x : " + x + " y : " + y)
+                    const depthInMeters = depthInfo.getDepthInMeters(x, y) * 1.5;
+
+                    //console.log("depth : " + depthInMeters);
+                    
+                    let projectionMatrix = camera.projectionMatrix;
+                    
+                    let A = projectionMatrix.elements[10];
+                    let B = projectionMatrix.elements[11];
+
+                    let depth = 0.5*(-A * depthInMeters + B) / depthInMeters + 0.5;
+                    //console.log("depth : " + depth);
+                    //console.log("depth : " + depthInMeters);
+
+                    // create a three js box of color green
+                    const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                    const testclone = new THREE.Mesh(geometry, material);
+                    let pos = new THREE.Vector3(x, y, depth);
+                    pos.unproject(camera);
+                    testclone.position.copy(pos);
+                    scene.add(testclone);
+                    
                 }
             }
 
