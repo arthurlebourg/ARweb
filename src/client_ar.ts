@@ -171,8 +171,6 @@ export async function activateAR() {
             
             let hitTestResultsPerInputSource = frame.getHitTestResultsForTransientInput(transientInputHitTestSource);
             
-            let distance_real = 0;
-
             if (hitTestResultsPerInputSource.length > 0 && reticle) {
                 let hitTestResult = hitTestResultsPerInputSource[0];
                 let hitTestResults = hitTestResult.results;
@@ -181,7 +179,6 @@ export async function activateAR() {
                     const clone = reticle.clone();
 
                     // distance from view.tranform.position to hitpose
-                    distance_real = Math.sqrt(Math.pow(hitPose.transform.position.x - view.transform.position.x, 2) + Math.pow(hitPose.transform.position.y - view.transform.position.y, 2) + Math.pow(hitPose.transform.position.z - view.transform.position.z, 2));
 
                     clone.position.copy(hitPose.transform.position);
 
@@ -224,27 +221,26 @@ export async function activateAR() {
                 
                 // let vec = new THREE.Vector3(x , -y, 0.5);
                 // vec.unproject(camera);
+                // 
+            
+                console.log("view: ", view)
                 
                 let vec4 = new THREE.Vector4(x , -y, 0.5, 1.0);
-                // inverse view.projectionMatrix
-                let inv : THREE.Matrix4 = new THREE.Matrix4();
-                inv.fromArray(view.projectionMatrix).invert();
-                let p = vec4.applyMatrix4(inv);
-                let vec = new THREE.Vector3(p.x / p.w, p.y / p.w, p.z / p.w);
-                console.log("camera: ", camera)
+                let projection : THREE.Matrix4 = new THREE.Matrix4();
+                let viewmat : THREE.Matrix4 = new THREE.Matrix4();
+                projection.fromArray(view.projectionMatrix);
+                viewmat.fromArray(view.transform.inverse.matrix);
+                projection.multiply(viewmat).invert();
+                vec4.applyMatrix4(projection);
 
-                //console.log("view: ", view)
+                let vec = new THREE.Vector3(vec4.x / vec4.w, vec4.y / vec4.w, vec4.z / vec4.w);
+                
                 vec.sub(view.transform.position).normalize();
 
-                let distance = (depthInMeters - view.transform.position.z) / vec.z;
+                let distance = depthInMeters// (depthInMeters - view.transform.position.z) / vec.z;
 
-                testclone.position.copy(view.transform.position).add(vec.multiplyScalar(-distance));
+                testclone.position.copy(view.transform.position).add(vec.multiplyScalar(distance));
 
-                //log distance from view.transform.position to pos
-                let dist = Math.sqrt(Math.pow(testclone.position.x - view.transform.position.x, 2) + Math.pow(testclone.position.y - view.transform.position.y, 2) + Math.pow(testclone.position.z - view.transform.position.z, 2));
-                //console.log("distance : " + dist);
-                //console.log("distance real : " + distance_real);
-                //console.log("view pos : " + view.transform.position.x + " " + view.transform.position.y + " " + view.transform.position.z);
                 scene.add(testclone);
 
                 const dir = testclone.position.clone();
