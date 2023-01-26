@@ -10,6 +10,6 @@ RUN npm install
 
 RUN mkdir logs
 
-EXPOSE 3001
+EXPOSE 3000
 
 CMD [ "npm", "run", "serve" ]

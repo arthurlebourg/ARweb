@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "node server"
   },
   "dependencies": {
     "@types/webxr": "^0.5.0",
