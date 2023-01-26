@@ -222,16 +222,16 @@ export async function activateAR() {
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const testclone = new THREE.Mesh(geometry, material);
                 
-                let vec = new THREE.Vector3(x , -y, 0.5);
-                vec.unproject(camera);
+                // let vec = new THREE.Vector3(x , -y, 0.5);
+                // vec.unproject(camera);
                 
-                /*let vec4 = new THREE.Vector4(x , -y, 0.5, 1.0);
+                let vec4 = new THREE.Vector4(x , -y, 0.5, 1.0);
                 // inverse view.projectionMatrix
                 let inv : THREE.Matrix4 = new THREE.Matrix4();
-                inv.fromArray(view.projectionMatrix);
+                inv.fromArray(view.projectionMatrix).invert();
                 let p = vec4.applyMatrix4(inv);
                 let vec = new THREE.Vector3(p.x / p.w, p.y / p.w, p.z / p.w);
-                console.log("camera: ", camera)*/
+                console.log("camera: ", camera)
 
                 //console.log("view: ", view)
                 vec.sub(view.transform.position).normalize();
