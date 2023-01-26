@@ -41,62 +41,6 @@ wss.broadcast = function (data) {
     });
 };
 
-server.listen(process.env.PORT || 3000, () => {
+server.listen(process.env.PORT || 3001, () => {
     console.log(`Server running at http://127.0.0.1:${server.address().port}/`);
 });
-
-
-/*var server = createServer(app);
-var port = process.env.PORT || 3000;
-server.listen(port);
-server.on('listening', onListening);
-server.on('error', onError);
-const io = new Server(server);
-
-function onListening() {
-    var addr = server.address();
-    var bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
-    console.log('Listening on ' + bind);
-}
-
-function onError(error) {
-    if (error.syscall !== 'listen') {
-        throw error;
-    }
-    var bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port;
-    switch (error.code) {
-        case 'EACCES':
-            console.error(bind + ' requires elevated privileges');
-            process.exit(1);
-            break;
-        case 'EADDRINUSE':
-            console.error(bind + ' is already in use');
-            process.exit(1);
-            break;
-        default:
-            throw error;
-    }
-}
-
-var objects = [];
-
-io.on('connection', (socket) => {
-    console.log('a user connected');
-
-    socket.on('ready', () => {
-        console.log('new player is ready');
-        for (let i = 0; i < objects.length; i++) {
-            io.emit('list object', objects[i]);
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log('user disconnected');
-    });
-    
-    socket.on('phone video', data => {
-        //console.log(data);
-        io.emit('computer video', data);
-
-    });
-});*/
