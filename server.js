@@ -4,16 +4,23 @@ import path from 'path';
 import serveStatic from 'serve-static';
 //import bodyParser from 'body-parser';
 import * as WebSocket from 'ws';
-import { createServer } from 'http';
+import { createServer } from 'https';
+import fs from 'fs';
 
 var app = express();
 
 var __dirname = path.resolve();
 
+// Yes, TLS is required
+const serverConfig = {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem'),
+  };
+
 app.use(serveStatic(__dirname + "/dist"));
 //app.use(bodyParser.json());
 
-const server = createServer(app);
+const server = createServer(serverConfig, app);
 
 const wss = new WebSocket.WebSocketServer({ server });
 
@@ -42,5 +49,5 @@ wss.broadcast = function (data) {
 };
 
 server.listen(process.env.PORT || 3000, () => {
-    console.log(`Server running at http://127.0.0.1:${server.address().port}/`);
+    console.log(`Server running at https://127.0.0.1:${server.address().port}/`);
 });

@@ -112,7 +112,7 @@ function errorHandler(error: any) {
 document.addEventListener("DOMContentLoaded", async () => {
   uuid = createUUID();
   console.log('UUID : ' + uuid);
-  serverConnection = new WebSocket('ws://' + window.location.host + '/');
+  serverConnection = new WebSocket('wss://' + window.location.host + '/');
   serverConnection.onmessage = gotMessageFromServer;
 
   //localVideo = document.getElementById('localVideo');

@@ -4,7 +4,7 @@ WORKDIR /usr/src/app
 
 COPY dist/ ./dist/
 
-COPY package*.json server.js tsconfig*.json vite.config.ts ./
+COPY package*.json server.js tsconfig*.json vite.config.ts cert.pem key.pem ./
 
 RUN npm install
 
