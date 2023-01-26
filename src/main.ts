@@ -29,7 +29,7 @@ function createUUID() {
 
 function getUserMediaSuccess(stream: any, is_AR : boolean = false) {
   localStream = stream;
-  if (is_AR)
+  if (!is_AR)
   {
     localVideo.srcObject = stream;
   }
@@ -157,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       remoteVideo = document.createElement("video");
       remoteVideo.id = "remoteVideo";
       remoteVideo.autoplay = true;
-      remoteVideo.style.width = "40%";
+      remoteVideo.style.maxWidth = "15vw";
       remoteVideo.className = "clickable";
 
       document.body.appendChild(localVideo);
@@ -169,10 +169,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log(e.clientX + " ; " + e.clientY)
         var x = e.clientX - rect.left; //x position within the element.
         var y = e.clientY - rect.top;  //y position within the element.
-        // normalise to -1 - 1
+        // normalize x and y to 0-1 origin is top left corner
         x = (x / rect.width) * 2 - 1;
         y = (y / rect.height) * 2 - 1;
-        console.log("Left? : " + x + " ; Top? : " + y + ".");
+        console.log("x? : " + x + " ; y? : " + y + ".");
 
         dataChannel.send(JSON.stringify({ click: { x: x, y: y } }))
       }

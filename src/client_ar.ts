@@ -8,13 +8,14 @@ import AROverlay from './AR_overlay.vue';
 
 let remote_place_object : boolean = false;
 let x : number = 0
-let y : number= 0
+let y : number = 0
 
-export function place_object(x : number, y : number)
+export function place_object(x_input : number, y_input : number)
 {
     remote_place_object = true;
-    x = x;
-    y = y;
+    x = x_input;
+    y = y_input;
+    console.log("place_object : " + x + " ; " + y)
 }
 
 
@@ -67,8 +68,10 @@ export async function activateAR() {
     });
     renderer.autoClear = false;
 
+
     const camera = new THREE.PerspectiveCamera();
     camera.matrixAutoUpdate = false;
+    camera.matrixWorldAutoUpdate = false;
 
     var overlay = document.getElementById("ar_overlay")!;
 
@@ -89,6 +92,9 @@ export async function activateAR() {
     console.log(session.depthUsage);
     // @ts-ignore
     console.log(session.depthDataFormat);
+    
+    camera.near = session.renderState.depthNear;
+    camera.far = session.renderState.depthFar;
 
     if (session.domOverlayState) {
         document.getElementById("session-info")!.innerHTML =
@@ -111,16 +117,13 @@ export async function activateAR() {
     const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
     let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
 
-    /*session.addEventListener("select", async (event : any) => {
+    session.addEventListener("select", async (event : any) => {
+        //x = (event.inputSource.gamepad!.axes[0] + 1) / 2;
+        //y = (event.inputSource.gamepad!.axes[1] + 1) / 2;
         x = event.inputSource.gamepad!.axes[0];
         y = event.inputSource.gamepad!.axes[1];
-        /*if (reticle) {
-            //console.log(event)
-            let user_x = event.inputSource.gamepad!.axes[0];
-            let user_y = event.inputSource.gamepad!.axes[1];
-            console.log(user_x, user_y);
-        }* /
-    });*/
+        remote_place_object = true;
+    });
     
 
     // Create a render loop that allows us to draw on the AR view.
@@ -167,6 +170,8 @@ export async function activateAR() {
             }
             
             let hitTestResultsPerInputSource = frame.getHitTestResultsForTransientInput(transientInputHitTestSource);
+            
+            let distance_real = 0;
 
             if (hitTestResultsPerInputSource.length > 0 && reticle) {
                 let hitTestResult = hitTestResultsPerInputSource[0];
@@ -174,6 +179,10 @@ export async function activateAR() {
                 if (hitTestResults.length > 0) {
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
                     const clone = reticle.clone();
+
+                    // distance from view.tranform.position to hitpose
+                    distance_real = Math.sqrt(Math.pow(hitPose.transform.position.x - view.transform.position.x, 2) + Math.pow(hitPose.transform.position.y - view.transform.position.y, 2) + Math.pow(hitPose.transform.position.z - view.transform.position.z, 2));
+
                     clone.position.copy(hitPose.transform.position);
 
                     clone.quaternion.copy(hitPose.transform.orientation);
@@ -186,33 +195,69 @@ export async function activateAR() {
 
             if (remote_place_object)
             {
+                remote_place_object = false;
+                console.log("x: " + x + " y: " + y)
+                
                 const depthInfo = frame.getDepthInformation(view);
-                const depthInMeters = depthInfo.getDepthInMeters(x, y);
+                const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
+
 
                 console.log("depth : " + depthInMeters);
 
-                let projectionMatrix = camera.projectionMatrix;
+                /*let projectionMatrix = camera.projectionMatrix;
 
                 let A = projectionMatrix.elements[10];
                 let B = projectionMatrix.elements[11];
 
-                let depth = 0.5 * (-A * depthInMeters + B) / depthInMeters + 0.5;
+                //let depth = 0.5 * (-A * depthInMeters + B) / depthInMeters + 0.5;
+                //let depth = depthSample(depthInMeters, camera)
+                //let depth = (depthInMeters - camera.near) / (camera.far - camera.near)
 
                 //let depth = depthSample(depthInMeters, camera)
                 //console.log("depth : " + depth);
-                //console.log("depth : " + depthInMeters);
+                //console.log("depth : " + depthInMeters);*/
 
                 // create a three js box of color green
                 const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const testclone = new THREE.Mesh(geometry, material);
-                let pos = new THREE.Vector3(x, y, depth);
-                pos.unproject(camera);
-                testclone.position.copy(pos);
+                
+                let vec = new THREE.Vector3(x , -y, 0.5);
+                vec.unproject(camera);
+                
+                /*let vec4 = new THREE.Vector4(x , -y, 0.5, 1.0);
+                // inverse view.projectionMatrix
+                let inv : THREE.Matrix4 = new THREE.Matrix4();
+                inv.fromArray(view.projectionMatrix);
+                let p = vec4.applyMatrix4(inv);
+                let vec = new THREE.Vector3(p.x / p.w, p.y / p.w, p.z / p.w);
+                console.log("camera: ", camera)*/
+
+                //console.log("view: ", view)
+                vec.sub(view.transform.position).normalize();
+
+                let distance = (depthInMeters - view.transform.position.z) / vec.z;
+
+                testclone.position.copy(view.transform.position).add(vec.multiplyScalar(-distance));
+
+                //log distance from view.transform.position to pos
+                let dist = Math.sqrt(Math.pow(testclone.position.x - view.transform.position.x, 2) + Math.pow(testclone.position.y - view.transform.position.y, 2) + Math.pow(testclone.position.z - view.transform.position.z, 2));
+                //console.log("distance : " + dist);
+                //console.log("distance real : " + distance_real);
+                //console.log("view pos : " + view.transform.position.x + " " + view.transform.position.y + " " + view.transform.position.z);
                 scene.add(testclone);
 
-                remote_place_object = false;
+                const dir = testclone.position.clone();
 
+                //normalize the direction vector (convert to vector of length 1)
+                dir.normalize();
+
+                const origin = view.transform.position;
+                const length = 1;
+                const hex = 0xffff00;
+
+                const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
+                scene.add(arrowHelper);
             }
 
             // @ts-ignore
