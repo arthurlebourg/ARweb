@@ -1,6 +1,6 @@
 // server.js
 import express from 'express';
-import path from 'path';
+import path, { resolve } from 'path';
 import serveStatic from 'serve-static';
 //import bodyParser from 'body-parser';
 import * as WebSocket from 'ws';
@@ -13,8 +13,8 @@ var __dirname = path.resolve();
 
 // Yes, TLS is required
 const serverConfig = {
-    key: fs.readFileSync('/etc/letsencrypt/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/fullchain.pem')
+    key: fs.readFileSync(resolve(__dirname, 'certifications/privkey.pem')),
+    cert: fs.readFileSync(resolve(__dirname, 'certifications/fullchain.pem'))
   };
 
 app.use(serveStatic(__dirname + "/dist"));
