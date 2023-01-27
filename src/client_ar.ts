@@ -3,8 +3,6 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { serverConnection } from './main'
 import { uuid } from './main'
 
-import { createApp } from 'vue';
-import AROverlay from './AR_overlay.vue';
 
 let remote_place_object : boolean = false;
 let x : number = 0
@@ -28,11 +26,6 @@ function depthSample(linearDepth : number, camera: THREE.PerspectiveCamera)
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
-
-    var ardiv = document.createElement("div")
-    ardiv.id = "ar_overlay"
-    document.body.appendChild(ardiv)
-    createApp(AROverlay).mount('#ar_overlay')!
 
     let buttons = document.getElementsByClassName("start_button");
     while (buttons.length > 0) {

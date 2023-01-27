@@ -2,12 +2,15 @@ import './style.css'
 import { activateAR } from './client_ar';
 import { place_object } from './client_ar';
 
+import { createApp } from 'vue';
+import AROverlay from './AR_overlay.vue';
+
 var localStream: any;
 var remoteVideo: any;
 var peerConnection: any;
 export var uuid: string;
 export var serverConnection: any;
-var localVideo: any;
+//var localVideo: any;
 export var dataChannel: any;
 
 var peerConnectionConfig = {
@@ -29,10 +32,6 @@ function createUUID() {
 
 function getUserMediaSuccess(stream: any, is_AR : boolean = false) {
   localStream = stream;
-  if (!is_AR)
-  {
-    localVideo.srcObject = stream;
-  }
 }
 
 function start(isCaller: boolean) {
@@ -126,8 +125,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     button_AR.className = "start_button"
     button_AR.value = "Start back camera with AR";
     button_AR.onclick = async () => {
+      var ardiv = document.createElement("div")
+      ardiv.id = "ar_overlay"
+      document.body.appendChild(ardiv)
+
+      createApp(AROverlay).mount('#ar_overlay')!
+      remoteVideo = document.getElementById('remoteVideo');
+      console.log(remoteVideo)
+      
       let stream = await activateAR()
       getUserMediaSuccess(stream, true);
+
 
       start(true);
     };
@@ -148,11 +156,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       // < video id = "localVideo" autoplay muted style = "width:40%;" > </video>
       // < video id = "remoteVideo" class="clickable" autoplay style = "width:40%;" > </video>
 
-      localVideo = document.createElement("video");
+      /*localVideo = document.createElement("video");
       localVideo.id = "localVideo";
       localVideo.autoplay = true;
       localVideo.muted = true;
-      localVideo.style.width = "40%";
+      localVideo.style.width = "40%";*/
 
       remoteVideo = document.createElement("video");
       remoteVideo.id = "remoteVideo";
@@ -160,7 +168,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       remoteVideo.style.maxWidth = "15vw";
       remoteVideo.className = "clickable";
 
-      document.body.appendChild(localVideo);
+      //document.body.appendChild(localVideo);
       document.body.appendChild(remoteVideo);
 
       remoteVideo.onclick = function clickEvent(e: any) {

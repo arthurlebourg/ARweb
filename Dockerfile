@@ -8,7 +8,7 @@ COPY package*.json server.js tsconfig*.json vite.config.ts cert.pem key.pem ./
 
 RUN npm install
 
-RUN mkdir logs
+RUN mkdir certifications
 
 EXPOSE 3000
 

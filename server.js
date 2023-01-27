@@ -13,8 +13,8 @@ var __dirname = path.resolve();
 
 // Yes, TLS is required
 const serverConfig = {
-    key: fs.readFileSync('key.pem'),
-    cert: fs.readFileSync('cert.pem'),
+    key: fs.readFileSync(resolve(__dirname, 'certifications/privkey.pem')),
+    cert: fs.readFileSync(resolve(__dirname, 'certifications/fullchain.pem'))
   };
 
 app.use(serveStatic(__dirname + "/dist"));
