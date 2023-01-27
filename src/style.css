@@ -92,3 +92,9 @@ button:focus-visible {
   padding: 0.5vw;
   left: 0px;
 }
+
+.top_down_list
+{
+  display: flex;
+  flex-direction: column;
+}

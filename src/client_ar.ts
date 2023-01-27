@@ -1,8 +1,5 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { serverConnection } from './main'
-import { uuid } from './main'
-
 
 let remote_place_object : boolean = false;
 let x : number = 0
@@ -16,21 +13,13 @@ export function place_object(x_input : number, y_input : number)
     console.log("place_object : " + x + " ; " + y)
 }
 
-
-function depthSample(linearDepth : number, camera: THREE.PerspectiveCamera)
-{
-    let nonLinearDepth = (camera.far + camera.near - 2.0 * camera.near * camera.far / linearDepth) / (camera.far - camera.near);
-    nonLinearDepth = (nonLinearDepth + 1.0) / 2.0;
-    return nonLinearDepth;
-}
-
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
 
-    let buttons = document.getElementsByClassName("start_button");
+    /*let buttons = document.getElementsByClassName("start_button");
     while (buttons.length > 0) {
         document.body.removeChild(buttons[0]);
-    }
+    }*/
 
     const loader = new GLTFLoader();
     const scene = new THREE.Scene();
@@ -151,7 +140,7 @@ export async function activateAR() {
                 if (!ready) {
                     ready = true;
                     console.log("ready");
-                    serverConnection.send(JSON.stringify({'ready' : uuid}));
+                    //serverConnection.send(JSON.stringify({'ready' : uuid}));
                     document.getElementById("calibrate")!.style.display = "none";
                 }
 
