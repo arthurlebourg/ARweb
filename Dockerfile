@@ -8,7 +8,7 @@ COPY package*.json server.js tsconfig*.json vite.config.ts ./
 
 RUN mkdir certifications
 
-COPY /etc/letsencrypt/live/ar.arthurlb.fr/fullchain.pem /etc/letsencrypt/live/ar.arthurlb.fr/privkey.pem ./certifications/
+COPY fullchain.pem privkey.pem ./certifications/
 
 RUN npm install
 
