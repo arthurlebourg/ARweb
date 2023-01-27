@@ -1,6 +1,6 @@
 // server.js
 import express from 'express';
-import path from 'path';
+import path, { resolve } from 'path';
 import serveStatic from 'serve-static';
 //import bodyParser from 'body-parser';
 import * as WebSocket from 'ws';
