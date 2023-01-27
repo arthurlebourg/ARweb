@@ -4,11 +4,9 @@ WORKDIR /usr/src/app
 
 COPY dist/ ./dist/
 
-COPY package*.json server.js tsconfig*.json vite.config.ts cert.pem key.pem ./
+COPY package*.json server.js tsconfig*.json vite.config.ts ./
 
 RUN npm install
-
-RUN mkdir certifications
 
 EXPOSE 3000
 
