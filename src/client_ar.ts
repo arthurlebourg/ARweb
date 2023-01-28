@@ -245,9 +245,9 @@ export async function activateAR() {
                     scene.add(line);
                     console.log("line added");
 
-                    let distance = measure_points[measure_points.length - 1].distanceTo(pos);
+                    let distance_between_points : number = measure_points[measure_points.length - 1].distanceTo(pos);
                     font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
-                        const text_geometry = new TextGeometry( distance + "m", {
+                        const text_geometry = new TextGeometry( parseFloat(distance_between_points.toFixed(2)) + "m", {
                             font: font,
                             size: 0.05,
                             height: 0.01,
