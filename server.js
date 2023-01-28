@@ -62,15 +62,15 @@ wss.on('connection', function (ws) {
         }
         else if (data['ice']) {
             //console.log('Received ICE from ' + data['uuid'] + ' to ' + data['aimed_uuid']);
-            for (var [key, value] of clients) {
+            /*for (var [key, value] of clients) {
                 var data2 = JSON.parse(key);
                 if (data2['uuid'] == data['aimed_uuid']) {
                     console.log('Send ICE to ' + data['aimed_uuid']);
                     value.send(message.toString());
                     break;
                 }
-            }
-            //wss.broadcast(message);
+            }*/
+            wss.broadcast(message);
         }
     });
 

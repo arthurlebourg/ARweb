@@ -1,5 +1,30 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry }  from 'three/examples/jsm/geometries/TextGeometry.js';
+
+
+function unproject(x : number, y : number, view : any, depthInMeters : number) : THREE.Vector3
+{
+    let vec4 = new THREE.Vector4(x, -y, 0.5, 1.0);
+    let projection: THREE.Matrix4 = new THREE.Matrix4();
+    let viewmat: THREE.Matrix4 = new THREE.Matrix4();
+    projection.fromArray(view.projectionMatrix);
+    viewmat.fromArray(view.transform.inverse.matrix);
+    projection.multiply(viewmat).invert();
+    vec4.applyMatrix4(projection);
+
+    let vec = new THREE.Vector3(vec4.x / vec4.w, vec4.y / vec4.w, vec4.z / vec4.w);
+
+    vec.sub(view.transform.position).normalize();
+
+    let distance = depthInMeters
+
+    let res = new THREE.Vector3;
+
+    return res.copy(view.transform.position).add(vec.multiplyScalar(distance));
+}
+
 
 let remote_place_object : boolean = false;
 let x : number = 0
@@ -10,18 +35,27 @@ export function place_object(x_input : number, y_input : number)
     remote_place_object = true;
     x = x_input;
     y = y_input;
-    console.log("place_object : " + x + " ; " + y)
+}
+
+let measure_points : Array<THREE.Vector3> = [];
+const line_material = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 20 } );
+
+let add_measure_point : boolean = false;
+
+export function add_measure(x_input : number, y_input : number)
+{
+    console.log("add_measure");
+    add_measure_point = true;
+    x = x_input;
+    y = y_input;
 }
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
-
-    /*let buttons = document.getElementsByClassName("start_button");
-    while (buttons.length > 0) {
-        document.body.removeChild(buttons[0]);
-    }*/
-
     const loader = new GLTFLoader();
+    const font_loader = new FontLoader();
+    console.log(font_loader)
+
     const scene = new THREE.Scene();
     let reticle: any;
     loader.load("https://immersive-web.github.io/webxr-samples/media/gltf/reticle/reticle.gltf", function (gltf) {
@@ -158,84 +192,89 @@ export async function activateAR() {
                 let hitTestResults = hitTestResult.results;
                 if (hitTestResults.length > 0) {
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
-                    const clone = reticle.clone();
+                    const geometry = new THREE.CircleGeometry(0.05, 32);
+                    const material = new THREE.MeshBasicMaterial({ color: 0x150000 });
+                    const circle = new THREE.Mesh(geometry, material);
 
-                    // distance from view.tranform.position to hitpose
+                    circle.position.copy(hitPose.transform.position);
 
-                    clone.position.copy(hitPose.transform.position);
+                    circle.quaternion.copy(hitPose.transform.orientation);
 
-                    clone.quaternion.copy(hitPose.transform.orientation);
-
-                    scene.add(clone);
-                    
+                    scene.add(circle);
                 }
             }
             
-
             if (remote_place_object)
             {
                 remote_place_object = false;
-                console.log("x: " + x + " y: " + y)
                 
                 const depthInfo = frame.getDepthInformation(view);
                 const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
 
-
-                console.log("depth : " + depthInMeters);
-
-                /*let projectionMatrix = camera.projectionMatrix;
-
-                let A = projectionMatrix.elements[10];
-                let B = projectionMatrix.elements[11];
-
-                //let depth = 0.5 * (-A * depthInMeters + B) / depthInMeters + 0.5;
-                //let depth = depthSample(depthInMeters, camera)
-                //let depth = (depthInMeters - camera.near) / (camera.far - camera.near)
-
-                //let depth = depthSample(depthInMeters, camera)
-                //console.log("depth : " + depth);
-                //console.log("depth : " + depthInMeters);*/
-
-                // create a three js box of color green
-                const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+                const geometry = new THREE.SphereGeometry(0.05, 32, 32);
                 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const testclone = new THREE.Mesh(geometry, material);
+                const sphere = new THREE.Mesh(geometry, material);
                 
-                // let vec = new THREE.Vector3(x , -y, 0.5);
-                // vec.unproject(camera);
-                // 
-            
-                console.log("view: ", view)
+                let pos = unproject(x, y, view, depthInMeters);
+                sphere.position.copy(pos)
+
+                scene.add(sphere);
+            }
+
+            if (add_measure_point)
+            {
+                add_measure_point = false;
+                const depthInfo = frame.getDepthInformation(view);
+                const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
+
+                let pos  = unproject(x, y, view, depthInMeters);
+
+                console.log("measure points ", measure_points.length);
+
+                if (measure_points.length > 0)
+                {
+                    // make array of type Vector3
+                    let pts  : THREE.Vector3[] = [];
+                    pts.push(measure_points[measure_points.length - 1].clone());
+                    pts.push(pos.clone());
+
+                    const geometry = new THREE.BufferGeometry().setFromPoints(pts);
+
+                    const line = new THREE.Line(geometry, line_material);
+
+                    scene.add(line);
+                    console.log("line added");
+
+                    let distance = measure_points[measure_points.length - 1].distanceTo(pos);
+                    font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
+                        const text_geometry = new TextGeometry( distance + "m", {
+                            font: font,
+                            size: 0.05,
+                            height: 0.01,
+                            curveSegments: 12,
+                            bevelEnabled: true,
+                            bevelThickness: 0.01,
+                            bevelSize: 0.01,
+                            bevelOffset: 0,
+                            bevelSegments: 5
+                        });
+                        const text_material = new THREE.MeshPhongMaterial({ color: 0xff0000, flatShading: true });
+                        const text_mesh = new THREE.Mesh(text_geometry, text_material);
+                        text_mesh.position.set((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, (pts[0].z + pts[1].z) / 2);
+                        scene.add(text_mesh);
+                    });
+
+                }
                 
-                let vec4 = new THREE.Vector4(x , -y, 0.5, 1.0);
-                let projection : THREE.Matrix4 = new THREE.Matrix4();
-                let viewmat : THREE.Matrix4 = new THREE.Matrix4();
-                projection.fromArray(view.projectionMatrix);
-                viewmat.fromArray(view.transform.inverse.matrix);
-                projection.multiply(viewmat).invert();
-                vec4.applyMatrix4(projection);
-
-                let vec = new THREE.Vector3(vec4.x / vec4.w, vec4.y / vec4.w, vec4.z / vec4.w);
+                measure_points.push(pos.clone());
                 
-                vec.sub(view.transform.position).normalize();
+                const geometry = new THREE.SphereGeometry(0.05, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const sphere = new THREE.Mesh(geometry, material);
+                
+                sphere.position.copy(pos)
 
-                let distance = depthInMeters// (depthInMeters - view.transform.position.z) / vec.z;
-
-                testclone.position.copy(view.transform.position).add(vec.multiplyScalar(distance));
-
-                scene.add(testclone);
-
-                const dir = testclone.position.clone();
-
-                //normalize the direction vector (convert to vector of length 1)
-                dir.normalize();
-
-                const origin = view.transform.position;
-                const length = 1;
-                const hex = 0xffff00;
-
-                const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
-                scene.add(arrowHelper);
+                scene.add(sphere);
             }
 
             // @ts-ignore
