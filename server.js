@@ -41,6 +41,17 @@ wss.on('connection', function (ws) {
         //console.log('received: %s', message);
         var data = JSON.parse(message);
 
+        if (data['offer_removed']) {
+            console.log('Offer removed from ' + data['uuid']);
+            for (var [key, value] of clients) {
+                if (value == ws) {
+                    clients.delete(key);
+                    wss.broadcast(message);
+                    break;
+                }
+            }
+        }
+
         if (data['sdp']) {
             if (data['sdp']['type'] == 'offer') {
                 console.log('Received offer from ' + data['uuid']);
@@ -54,23 +65,22 @@ wss.on('connection', function (ws) {
                     var data2 = JSON.parse(key);
                     if (data2['uuid'] == data['aimed_uuid']) {
                         value.send(message.toString());
-                        clients.delete(key);
+                        //clients.delete(key);
                         break;
                     }
                 }
             }
         }
         else if (data['ice']) {
-            //console.log('Received ICE from ' + data['uuid'] + ' to ' + data['aimed_uuid']);
-            /*for (var [key, value] of clients) {
+            console.log('Received ICE from ' + data['uuid'] + ' to ' + data['aimed_uuid']);
+            for (var [key, value] of clients) {
                 var data2 = JSON.parse(key);
                 if (data2['uuid'] == data['aimed_uuid']) {
                     console.log('Send ICE to ' + data['aimed_uuid']);
                     value.send(message.toString());
                     break;
                 }
-            }*/
-            wss.broadcast(message);
+            }
         }
     });
 

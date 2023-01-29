@@ -64,11 +64,22 @@ export async function activateAR() {
         scene.add(reticle);
     })
 
+    
+    const small_ball_geometry = new THREE.SphereGeometry(0.025, 32, 32);
+    const ball_geometry = new THREE.SphereGeometry(0.05, 32, 32);
+    const red_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+    const yellow_material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const sphere = new THREE.Mesh(ball_geometry, red_material);
+                
+
+    const circle_geometry = new THREE.CircleGeometry(0.05, 32);
+    const circle_material = new THREE.MeshBasicMaterial({ color: 0x16d94a });
+    const circle = new THREE.Mesh(circle_geometry, circle_material);
+
     const canvas = document.createElement("canvas");
-    canvas.addEventListener('pointerdown', console.log);
 
     let ready = false;
-    //document.body.appendChild(canvas);
     const xr_context : WebGL2RenderingContext = canvas.getContext("webgl2", { xrCompatible: true, antialias : false})!;
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
@@ -104,19 +115,10 @@ export async function activateAR() {
         },
     });
 
-    // @ts-ignore
-    console.log(session.depthUsage);
-    // @ts-ignore
-    console.log(session.depthDataFormat);
-    
-    camera.near = session.renderState.depthNear;
-    camera.far = session.renderState.depthFar;
-
     if (session.domOverlayState) {
         document.getElementById("session-info")!.innerHTML =
             "DOM Overlay type: " + session.domOverlayState.type;
     }
-
 
     session.updateRenderState({
         baseLayer: new XRWebGLLayer(session, xr_context)
@@ -136,9 +138,9 @@ export async function activateAR() {
     session.addEventListener("select", async (event : any) => {
         //x = (event.inputSource.gamepad!.axes[0] + 1) / 2;
         //y = (event.inputSource.gamepad!.axes[1] + 1) / 2;
-        x = event.inputSource.gamepad!.axes[0];
+        /*x = event.inputSource.gamepad!.axes[0];
         y = event.inputSource.gamepad!.axes[1];
-        remote_place_object = true;
+        remote_place_object = true;*/
     });
     
 
@@ -147,7 +149,6 @@ export async function activateAR() {
         //session.dispatchEvent(new XRInputSourceEvent("select", {}));
         // Queue up the next draw request.
         session.requestAnimationFrame(onXRFrame);
-
 
         // Bind the graphics framebuffer to the baseLayer's framebuffer
         xr_context.bindFramebuffer(xr_context.FRAMEBUFFER, session.renderState.baseLayer!.framebuffer)
@@ -192,15 +193,13 @@ export async function activateAR() {
                 let hitTestResults = hitTestResult.results;
                 if (hitTestResults.length > 0) {
                     let hitPose = hitTestResults[0].getPose(referenceSpace);
-                    const geometry = new THREE.CircleGeometry(0.05, 32);
-                    const material = new THREE.MeshBasicMaterial({ color: 0x150000 });
-                    const circle = new THREE.Mesh(geometry, material);
 
-                    circle.position.copy(hitPose.transform.position);
+                    let new_circle = circle.clone();
+                    new_circle.position.copy(hitPose.transform.position);
 
-                    circle.quaternion.copy(hitPose.transform.orientation);
+                    new_circle.quaternion.copy(hitPose.transform.orientation);
 
-                    scene.add(circle);
+                    scene.add(new_circle);
                 }
             }
             
@@ -211,14 +210,11 @@ export async function activateAR() {
                 const depthInfo = frame.getDepthInformation(view);
                 const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
 
-                const geometry = new THREE.SphereGeometry(0.05, 32, 32);
-                const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-                const sphere = new THREE.Mesh(geometry, material);
-                
                 let pos = unproject(x, y, view, depthInMeters);
-                sphere.position.copy(pos)
+                let new_sphere = sphere.clone();
+                new_sphere.position.copy(pos)
 
-                scene.add(sphere);
+                scene.add(new_sphere);
             }
 
             if (add_measure_point)
@@ -258,9 +254,10 @@ export async function activateAR() {
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
-                        const text_material = new THREE.MeshPhongMaterial({ color: 0xff0000, flatShading: true });
+                        const text_material = new THREE.MeshPhongMaterial({ color: 0x138fed, flatShading: true });
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, (pts[0].z + pts[1].z) / 2);
+                        text_mesh.lookAt(camera.position);
                         scene.add(text_mesh);
                     });
 
@@ -268,13 +265,11 @@ export async function activateAR() {
                 
                 measure_points.push(pos.clone());
                 
-                const geometry = new THREE.SphereGeometry(0.05, 32, 32);
-                const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-                const sphere = new THREE.Mesh(geometry, material);
+                const new_sphere = new THREE.Mesh(small_ball_geometry, yellow_material);
                 
-                sphere.position.copy(pos)
+                new_sphere.position.copy(pos)
 
-                scene.add(sphere);
+                scene.add(new_sphere);
             }
 
             // @ts-ignore
@@ -304,7 +299,19 @@ export async function activateAR() {
             
             xr_context.viewport(0, 0, xr_context.drawingBufferWidth, xr_context.drawingBufferHeight);
 
-            renderer.render(scene, camera);
+            if (!ready) {
+                const width = session.renderState.baseLayer!.framebufferWidth;
+                const height = session.renderState.baseLayer!.framebufferHeight;
+                xr_context.enable(xr_context.SCISSOR_TEST);
+                xr_context.scissor(width / 4, height / 4, width / 2, height / 2);
+                xr_context.clearColor(0.5, 0.0, 0.0, 0.5);
+                xr_context.clear(xr_context.COLOR_BUFFER_BIT | xr_context.DEPTH_BUFFER_BIT);
+                xr_context.disable(xr_context.SCISSOR_TEST);
+            }
+            else {
+                // Render the scene with THREE.WebGLRenderer.
+                renderer.render(scene, camera)
+            }
         }
     }
     session.requestAnimationFrame(onXRFrame);

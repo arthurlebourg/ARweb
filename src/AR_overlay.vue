@@ -4,5 +4,5 @@
     <p id="calibrate">Please move your phone around to calibrate</p>
     <div id="session-info"></div>
 
-    <video id="remoteVideo" autoplay style="width:20vw;"></video>
+    <video id="remoteVideo" autoplay style="width:40vw;"></video>
 </template>

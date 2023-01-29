@@ -25,7 +25,6 @@ var peerConnectionConfig = {
   ]
 };
 
-
 function setup_front_cam() {
   let button = document.createElement("input");
   button.type = "button";
@@ -39,7 +38,7 @@ function setup_front_cam() {
 
 function setup_ar() {
   can_do_ar = true
-  document.getElementById('main_text')!.innerHTML = "Amazing! Your browser supports AR, you thus can start a call using AR camera."
+  document.getElementById('main_text')!.innerHTML = "Amazing! Your browser supports AR, you can start a call using AR camera."
 
   let button_AR = document.createElement("input");
   button_AR.type = "button";
@@ -90,13 +89,20 @@ async function start(isCaller: boolean, is_ar: boolean) {
       // normalize x and y to 0-1 origin is top left corner
       x = (x / rect.width) * 2 - 1;
       y = (y / rect.height) * 2 - 1;
-      console.log("x? : " + x + " ; y? : " + y + ".");
 
-      let measure_checkbox = document.getElementById('measure') as HTMLInputElement
-      if (measure_checkbox.checked) {
+      const radioButtons = document.querySelectorAll('input[name="action"]') as NodeListOf<HTMLInputElement>;
+      let selectedValue;
+      for (let i = 0; i < radioButtons.length; i++) {
+        if (radioButtons[i].checked) {
+          selectedValue = radioButtons[i].value;
+          break;
+        }
+      }
+
+      if (selectedValue == "measure") {
         dataChannel.send(JSON.stringify({ add_measure: { x: x, y: y } }))
       }
-      else {
+      else if (selectedValue == "place") {
         dataChannel.send(JSON.stringify({ click: { x: x, y: y } }))
       }
     }
@@ -221,6 +227,7 @@ function gotIceCandidate(event: any) {
 
 function gotRemoteStream(event: any) {
   console.log('got remote stream');
+  serverConnection.send(JSON.stringify({ 'offer_removed': true, 'uuid': uuid }));
   remoteVideo.srcObject = event.streams[0];
 }
 
@@ -237,8 +244,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')) {
     setup_ar()
   }
-
-
   if (navigator.mediaDevices) {
     setup_front_cam()
   }
