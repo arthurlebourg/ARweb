@@ -22,6 +22,10 @@ var peerConnectionConfig = {
   'iceServers': [
     { 'urls': 'stun:stun.stunprotocol.org:3478' },
     { 'urls': 'stun:stun.l.google.com:19302' },
+    { 'urls': 'turn:64.233.165.127:19305?transport=udp' },
+    { 'urls': 'turn:[2A00:1450:4010:C01::7F]:19305?transport=udp'},
+    { 'urls': 'turn:turn:64.233.165.127:443?transport=tcp' },
+    { 'urls': 'turn:[2A00:1450:4010:C01::7F]:443?transport=tcp'}
   ]
 };
 
