@@ -140,7 +140,7 @@ async function start(isCaller: boolean, is_ar: boolean) {
   peerConnection.addStream(localStream);
 
   if (isCaller) {
-    let desc = peerConnection.createOffer()//.then(createdDescription).catch(errorHandler);
+    let desc = await peerConnection.createOffer().catch(errorHandler)//.then(createdDescription).catch(errorHandler);
     peerConnection.setLocalDescription(desc).then(function () {
       var msg = JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid, 'is_ar': is_ar });
       serverConnection.send(msg);

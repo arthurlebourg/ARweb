@@ -32,9 +32,12 @@ var clients = new Map();
 wss.on('connection', function (ws) {
     console.log('Client connected');
 
-
     for (var [key, value] of clients) {
-        wss.broadcast(key);
+        data = JSON.parse(key);
+        if (data['sdp']['type'] == 'offer')
+        {
+            wss.broadcast(key);
+        }
     }
 
     ws.on('message', function (message) {
