@@ -211,7 +211,7 @@ function gotMessageFromServer(message: any) {
       if (peerConnection == null) {
         console.log('peerConnection null (very sus)');
         console.log(signal);  
-        start(false, false)
+        await start(false, false)
       }
       correspondant_uuid = signal.uuid;
       peerConnection.onicecandidate = gotIceCandidate;
