@@ -178,7 +178,7 @@ function gotMessageFromServer(message: any) {
         peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp)).then(function () {
           var desc = peerConnection.createAnswer();//.then(createdDescription).catch(errorHandler);
           peerConnection.setLocalDescription(desc).then(function () {
-            var msg = JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid, 'aimed_uuid': signal.uuid });
+            var msg = JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid, 'aimed_uuid': correspondant_uuid });
             serverConnection.send(msg);
           }).catch(errorHandler);
         }).catch(errorHandler);
@@ -206,8 +206,13 @@ function gotMessageFromServer(message: any) {
         calls_list.appendChild(button_ar);
       }
     }
-    else {
+    else if (signal.sdp.type == 'answer'){
       console.log('Got answer.');
+      if (peerConnection == null) {
+        console.log('peerConnection null (very sus)');
+        console.log(signal);  
+        start(false, false)
+      }
       correspondant_uuid = signal.uuid;
       peerConnection.onicecandidate = gotIceCandidate;
       peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp)).catch(errorHandler);
