@@ -20,12 +20,26 @@ var correspondant_uuid: string;
 
 var peerConnectionConfig = {
   'iceServers': [
-    { 'urls': 'stun:stun.stunprotocol.org:3478' },
-    { 'urls': 'stun:stun.l.google.com:19302' },
-    { 'urls': 'turn:64.233.165.127:19305?transport=udp' },
-    { 'urls': 'turn:[2A00:1450:4010:C01::7F]:19305?transport=udp'},
-    { 'urls': 'turn:turn:64.233.165.127:443?transport=tcp' },
-    { 'urls': 'turn:[2A00:1450:4010:C01::7F]:443?transport=tcp'}
+    //{ 'urls': 'stun:stun.stunprotocol.org:3478' },
+    //{ 'urls': 'stun:stun.l.google.com:19302' },
+    {
+      urls: "stun:relay.metered.ca:80",
+    },
+    {
+      urls: "turn:relay.metered.ca:80",
+      username: "af3a203c9f2ef0a49fe9ede6",
+      credential: "55Mll9waLGuA0W5C",
+    },
+    {
+      urls: "turn:relay.metered.ca:443",
+      username: "af3a203c9f2ef0a49fe9ede6",
+      credential: "55Mll9waLGuA0W5C",
+    },
+    {
+      urls: "turn:relay.metered.ca:443?transport=tcp",
+      username: "af3a203c9f2ef0a49fe9ede6",
+      credential: "55Mll9waLGuA0W5C",
+    },
   ]
 };
 
