@@ -164,7 +164,7 @@ function gotMessageFromServer(message: any) {
 
   if (signal.sdp) {
     if (signal.sdp.type == 'offer') {
-      console.log('Got offer. Sending answer to peer.');
+      console.log('Got offer.');
       let calls_list = document.getElementById('calls_list')!;
       let button = document.createElement("input");
       button.type = "button";
@@ -172,6 +172,7 @@ function gotMessageFromServer(message: any) {
       button.value = "Start call with " + signal.uuid + " with front camera video";
       button.id = signal.uuid;
       button.onclick = async () => {
+        console.log("Sending offer to Peer.")
         await start(false, false)
         correspondant_uuid = signal.uuid;
         peerConnection.onicecandidate = gotIceCandidate;
@@ -208,10 +209,10 @@ function gotMessageFromServer(message: any) {
     }
     else if (signal.sdp.type == 'answer'){
       console.log('Got answer.');
-      if (peerConnection == null) {
+      if (peerConnection == undefined) {
         console.log('peerConnection null (very sus)');
         console.log(signal);  
-        await start(false, false)
+        start(false, false);
       }
       correspondant_uuid = signal.uuid;
       peerConnection.onicecandidate = gotIceCandidate;
