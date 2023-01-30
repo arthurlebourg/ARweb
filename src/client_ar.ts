@@ -43,6 +43,26 @@ function unproject(x : number, y : number, view : any, depthInMeters : number) :
 }
 
 
+const baseColor = new THREE.Color(0xffffff);
+const uniforms = {
+    color: { value: baseColor },
+    uRawValueToMeters: { value: 0.0010000000474974513 },
+    uDepthTexture: { value: new THREE.DataTexture() },
+    coordTrans: { value: new THREE.Vector2() }
+
+};
+const shaderMaterial = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: "precision mediump float; varying float zDistance; void main() { vec4 pos = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * pos; zDistance = -1.0 * pos.z;}",
+    fragmentShader: "uniform vec3 color; varying float zDistance; uniform sampler2D uDepthTexture; uniform float uRawValueToMeters; uniform vec2 coordTrans; void main() { vec2 coord = coordTrans * gl_FragCoord.xy + vec2(1.0,1.0); float alpha = 1.0; float threshold = 0.2; vec2 tmp = texture2D(uDepthTexture, coord.yx).ra; float depth = dot(tmp, vec2(255.0, 255.0*255.0)) * uRawValueToMeters; if (depth - zDistance < threshold) { discard; } gl_FragColor = vec4(color, 1.0);}",
+    depthTest: true,
+    transparent: true,
+    opacity: 0.5,
+    depthWrite: true,
+});
+
+console.log(shaderMaterial)
+
 let remote_place_object : boolean = false;
 let remote_x : number = 0
 let remote_y : number = 0
@@ -87,19 +107,16 @@ export async function activateAR() {
         reticle.visible = false;
         scene.add(reticle);
     })
-
+    
     
     const small_ball_geometry = new THREE.SphereGeometry(0.025, 32, 32);
     const ball_geometry = new THREE.SphereGeometry(0.05, 32, 32);
-    const red_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 
     const yellow_material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    const sphere = new THREE.Mesh(ball_geometry, red_material);
-                
+    const sphere = new THREE.Mesh(ball_geometry, shaderMaterial);
 
     const circle_geometry = new THREE.CircleGeometry(0.05, 32);
-    const circle_material = new THREE.MeshBasicMaterial({ color: 0x16d94a });
-    const circle = new THREE.Mesh(circle_geometry, circle_material);
+    const circle = new THREE.Mesh(circle_geometry, shaderMaterial);
 
     const canvas = document.createElement("canvas");
 
@@ -333,11 +350,20 @@ export async function activateAR() {
                 }
             }
             
+            const depthInfo = frame.getDepthInformation(view);
+            if (depthInfo)
+            {
+                shaderMaterial.uniforms.urawValueToMeters = depthInfo.uRawValueToMeters;
+                shaderMaterial.uniforms.coordTrans.value.x = -1/viewport.width;
+                shaderMaterial.uniforms.coordTrans.value.y = -1/viewport.height;
+                shaderMaterial.uniforms.uDepthTexture = depthInfo.texture;
+                shaderMaterial.needsUpdate = true;
+            }
+                
             if (remote_place_object)
             {
                 remote_place_object = false;
                 
-                const depthInfo = frame.getDepthInformation(view);
                 const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
 
                 let pos = unproject(remote_x, remote_y, view, depthInMeters);
@@ -350,7 +376,6 @@ export async function activateAR() {
             if (add_measure_point)
             {
                 add_measure_point = false;
-                const depthInfo = frame.getDepthInformation(view);
                 const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
 
                 let pos  = unproject(remote_x, remote_y, view, depthInMeters);
