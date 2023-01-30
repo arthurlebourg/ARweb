@@ -87,10 +87,14 @@ button:focus-visible {
 }
 
 .AR_DOM {
-  background-color: rgba(127, 127, 127, 0.90);
   position: relative;
   padding: 0.5vw;
   left: 0px;
+}
+
+.CLASSIC_DOM {
+  display: flex;
+  flex-direction: row;
 }
 
 .top_down_list

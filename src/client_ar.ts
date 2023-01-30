@@ -3,6 +3,23 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FontLoader, Font } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry }  from 'three/examples/jsm/geometries/TextGeometry.js';
 
+function get_ray(x : number, y : number, view : any) : THREE.Vector3
+{
+    let vec4 = new THREE.Vector4(x, -y, 0.5, 1.0);
+    let projection: THREE.Matrix4 = new THREE.Matrix4();
+    let viewmat: THREE.Matrix4 = new THREE.Matrix4();
+    projection.fromArray(view.projectionMatrix);
+    viewmat.fromArray(view.transform.inverse.matrix);
+    projection.multiply(viewmat).invert();
+    vec4.applyMatrix4(projection);
+
+    let vec = new THREE.Vector3(vec4.x / vec4.w, vec4.y / vec4.w, vec4.z / vec4.w);
+
+    vec.sub(view.transform.position).normalize();
+
+    return vec;
+    
+}
 
 function unproject(x : number, y : number, view : any, depthInMeters : number) : THREE.Vector3
 {
@@ -27,17 +44,19 @@ function unproject(x : number, y : number, view : any, depthInMeters : number) :
 
 
 let remote_place_object : boolean = false;
-let x : number = 0
-let y : number = 0
+let remote_x : number = 0
+let remote_y : number = 0
 
 export function place_object(x_input : number, y_input : number)
 {
     remote_place_object = true;
-    x = x_input;
-    y = y_input;
+    remote_x = x_input;
+    remote_y = y_input;
 }
 
-let measure_points : Array<THREE.Vector3> = [];
+let measure_points : Array<number> = [];
+let measure_texts : Array<number> = [];
+let measure_lines : Array<number> = [];
 const line_material = new THREE.LineBasicMaterial( { color: 0x0000ff, linewidth: 20 } );
 
 let add_measure_point : boolean = false;
@@ -46,15 +65,20 @@ export function add_measure(x_input : number, y_input : number)
 {
     console.log("add_measure");
     add_measure_point = true;
-    x = x_input;
-    y = y_input;
+    remote_x = x_input;
+    remote_y = y_input;
 }
+
+let selected_object : THREE.Object3D | null = null;
+let is_finger_down : boolean = false;
+let x : number = 0;
+let y : number = 0;
+
 
 export async function activateAR() {
     // Add a canvas element and initialize a WebGL context that is compatible with WebXR.
     const loader = new GLTFLoader();
     const font_loader = new FontLoader();
-    console.log(font_loader)
 
     const scene = new THREE.Scene();
     let reticle: any;
@@ -135,12 +159,96 @@ export async function activateAR() {
     const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace })!;
     let transientInputHitTestSource  = await session.requestHitTestSourceForTransientInput!({ profile: 'generic-touchscreen' })!;
 
-    session.addEventListener("select", async (event : any) => {
-        //x = (event.inputSource.gamepad!.axes[0] + 1) / 2;
-        //y = (event.inputSource.gamepad!.axes[1] + 1) / 2;
-        /*x = event.inputSource.gamepad!.axes[0];
+    /*session.addEventListener("select", async (event : any) => {
+        x = event.inputSource.gamepad!.axes[0];
         y = event.inputSource.gamepad!.axes[1];
-        remote_place_object = true;*/
+        remote_place_object = true;
+    });*/
+    
+
+    session.addEventListener("selectstart", async (event : any) => {
+        x = event.inputSource.gamepad!.axes[0];
+        y = event.inputSource.gamepad!.axes[1];
+
+        is_finger_down = true;
+    });
+
+    session.addEventListener("selectend", async (event : any) => {
+        x = event.inputSource.gamepad!.axes[0];
+        y = event.inputSource.gamepad!.axes[1];
+        is_finger_down = false;
+
+        // check if selected object is in measure_points
+        console.log("selected_object: ", selected_object);
+        console.log("measure_points: ", measure_points);
+        if (selected_object && measure_points.length > 1)
+        {
+            let index = measure_points.indexOf(selected_object.id);
+            console.log("index: ", index);
+            if (index > -1)
+            {
+                console.log("index: ", index);
+                console.log("measure_points.length: ", measure_points.length);
+                console.log("measure_obj: ", measure_points[index]);
+                console.log("measure_obj 2: ", measure_points[index + 1]);
+                if (index < measure_points.length - 1) {
+                    let text_obj = scene.getObjectById(measure_texts[index])! as THREE.Mesh;
+                    let line = scene.getObjectById(measure_lines[index])! as THREE.Line;
+                    let pt1 = scene.getObjectById(measure_points[index])!;
+                    let pt2 = scene.getObjectById(measure_points[index + 1])!;
+                    let distance_between_points = pt1.position.distanceTo(pt2.position);
+                    line.geometry = new THREE.BufferGeometry().setFromPoints([pt1.position, pt2.position]);
+                    font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
+                        const text_geometry = new TextGeometry(parseFloat(distance_between_points.toFixed(2)) + "m", {
+                            font: font,
+                            size: 0.05,
+                            height: 0.01,
+                            curveSegments: 12,
+                            bevelEnabled: true,
+                            bevelThickness: 0.01,
+                            bevelSize: 0.01,
+                            bevelOffset: 0,
+                            bevelSegments: 5
+                        });
+                        text_obj.geometry = text_geometry;
+                        text_obj.position.set((pt1.position.x + pt2.position.x) / 2, (pt1.position.y + pt2.position.y) / 2, (pt1.position.z + pt2.position.z) / 2);
+                        text_obj.lookAt(camera.position);
+                    });
+                }
+
+                if (index > 0)
+                {
+                    index -=1;
+                    let text_obj = scene.getObjectById(measure_texts[index])! as THREE.Mesh;
+                    let line = scene.getObjectById(measure_lines[index])! as THREE.Line;
+                    let pt1 = scene.getObjectById(measure_points[index])!;
+                    let pt2 = scene.getObjectById(measure_points[index + 1])!;
+                    let distance_between_points = pt1.position.distanceTo(pt2.position);
+                    line.geometry = new THREE.BufferGeometry().setFromPoints([pt1.position, pt2.position]);
+                    font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
+                        const text_geometry = new TextGeometry(parseFloat(distance_between_points.toFixed(2)) + "m", {
+                            font: font,
+                            size: 0.05,
+                            height: 0.01,
+                            curveSegments: 12,
+                            bevelEnabled: true,
+                            bevelThickness: 0.01,
+                            bevelSize: 0.01,
+                            bevelOffset: 0,
+                            bevelSegments: 5
+                        });
+                        text_obj.geometry = text_geometry;
+                        text_obj.position.set((pt1.position.x + pt2.position.x) / 2, (pt1.position.y + pt2.position.y) / 2, (pt1.position.z + pt2.position.z) / 2);
+                        text_obj.lookAt(camera.position);
+                    });
+
+
+                }
+            }
+        }
+
+        
+        selected_object = null;
     });
     
 
@@ -185,21 +293,43 @@ export async function activateAR() {
                 reticle.quaternion.set(hitPose.transform.orientation.x, hitPose.transform.orientation.y, hitPose.transform.orientation.z, hitPose.transform.orientation.w)
                 reticle.updateMatrixWorld(true);
             }
-            
-            let hitTestResultsPerInputSource = frame.getHitTestResultsForTransientInput(transientInputHitTestSource);
-            
-            if (hitTestResultsPerInputSource.length > 0 && reticle) {
-                let hitTestResult = hitTestResultsPerInputSource[0];
-                let hitTestResults = hitTestResult.results;
-                if (hitTestResults.length > 0) {
-                    let hitPose = hitTestResults[0].getPose(referenceSpace);
 
-                    let new_circle = circle.clone();
-                    new_circle.position.copy(hitPose.transform.position);
+            if (is_finger_down && !selected_object) {
+                let origin = new THREE.Vector3(view.transform.position.x, view.transform.position.y, view.transform.position.z);
+                let raycaster = new THREE.Raycaster(origin, get_ray(x, y, view));
+                let intersects = raycaster.intersectObjects(scene.children);
+                if (intersects.length > 0) {
+                    selected_object = intersects[0].object;
 
-                    new_circle.quaternion.copy(hitPose.transform.orientation);
+                    if (measure_lines.includes(selected_object.id))
+                        selected_object = null
+                    console.log("got an object :", selected_object);
+                }
+                else
+                {
+                    const depthInfo = frame.getDepthInformation(view);
+                    const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
+                    let pos = unproject(remote_x, remote_y, view, depthInMeters);
+                    let new_sphere = sphere.clone();
+                    new_sphere.position.copy(pos)
 
-                    scene.add(new_circle);
+                    scene.add(new_sphere);
+                    selected_object = new_sphere;
+                }
+            }
+
+            if (selected_object) {
+
+                let hitTestResultsPerInputSource = frame.getHitTestResultsForTransientInput(transientInputHitTestSource);
+
+                if (hitTestResultsPerInputSource.length > 0 && reticle) {
+                    let hitTestResult = hitTestResultsPerInputSource[0];
+                    let hitTestResults = hitTestResult.results;
+                    if (hitTestResults.length > 0) {
+                        let hitPose = hitTestResults[0].getPose(referenceSpace);
+
+                        selected_object.position.copy(hitPose.transform.position);
+                    }
                 }
             }
             
@@ -208,9 +338,9 @@ export async function activateAR() {
                 remote_place_object = false;
                 
                 const depthInfo = frame.getDepthInformation(view);
-                const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
+                const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
 
-                let pos = unproject(x, y, view, depthInMeters);
+                let pos = unproject(remote_x, remote_y, view, depthInMeters);
                 let new_sphere = sphere.clone();
                 new_sphere.position.copy(pos)
 
@@ -221,27 +351,25 @@ export async function activateAR() {
             {
                 add_measure_point = false;
                 const depthInfo = frame.getDepthInformation(view);
-                const depthInMeters = depthInfo.getDepthInMeters((x + 1) / 2, (y + 1) / 2);
+                const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
 
-                let pos  = unproject(x, y, view, depthInMeters);
-
-                console.log("measure points ", measure_points.length);
+                let pos  = unproject(remote_x, remote_y, view, depthInMeters);
 
                 if (measure_points.length > 0)
                 {
                     // make array of type Vector3
                     let pts  : THREE.Vector3[] = [];
-                    pts.push(measure_points[measure_points.length - 1].clone());
+                    pts.push(scene.getObjectById(measure_points[measure_points.length - 1])!.position.clone());
                     pts.push(pos.clone());
 
                     const geometry = new THREE.BufferGeometry().setFromPoints(pts);
 
                     const line = new THREE.Line(geometry, line_material);
 
+                    measure_lines.push(line.id);
                     scene.add(line);
-                    console.log("line added");
 
-                    let distance_between_points : number = measure_points[measure_points.length - 1].distanceTo(pos);
+                    let distance_between_points : number = scene.getObjectById(measure_points[measure_points.length - 1])!.position.distanceTo(pos);
                     font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
                         const text_geometry = new TextGeometry( parseFloat(distance_between_points.toFixed(2)) + "m", {
                             font: font,
@@ -258,18 +386,19 @@ export async function activateAR() {
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, (pts[0].z + pts[1].z) / 2);
                         text_mesh.lookAt(camera.position);
+                        measure_texts.push(text_mesh.id);
                         scene.add(text_mesh);
                     });
 
                 }
                 
-                measure_points.push(pos.clone());
-                
                 const new_sphere = new THREE.Mesh(small_ball_geometry, yellow_material);
                 
                 new_sphere.position.copy(pos)
 
+                measure_points.push(new_sphere.id);
                 scene.add(new_sphere);
+                
             }
 
             // @ts-ignore

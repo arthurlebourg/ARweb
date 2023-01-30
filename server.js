@@ -33,7 +33,7 @@ wss.on('connection', function (ws) {
     console.log('Client connected');
 
     for (var [key, value] of clients) {
-        data = JSON.parse(key);
+        var data = JSON.parse(key);
         if (data['sdp']['type'] == 'offer')
         {
             wss.broadcast(key);
@@ -75,7 +75,6 @@ wss.on('connection', function (ws) {
             }
         }
         else if (data['ice']) {
-            console.log('Received ICE from ' + data['uuid'] + ' to ' + data['aimed_uuid']);
             for (var [key, value] of clients) {
                 var data2 = JSON.parse(key);
                 if (data2['uuid'] == data['aimed_uuid']) {
