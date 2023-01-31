@@ -102,14 +102,14 @@ export async function activateAR() {
     
     const small_ball_geometry = new THREE.SphereGeometry(0.025, 32, 32);
     const ball_geometry = new THREE.SphereGeometry(0.05, 32, 32);
-    const red_material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    const red_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 
-    const yellow_material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
+    const yellow_material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     const sphere = new THREE.Mesh(ball_geometry, red_material);
                 
 
     const circle_geometry = new THREE.CircleGeometry(0.05, 32);
-    const circle_material = new THREE.MeshPhongMaterial({ color: 0x16d94a });
+    const circle_material = new THREE.MeshBasicMaterial({ color: 0x16d94a });
     const circle = new THREE.Mesh(circle_geometry, circle_material);
 
     const canvas = document.createElement("canvas");
@@ -374,7 +374,7 @@ export async function activateAR() {
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
-                        const text_material = new THREE.MeshPhongMaterial({ color: 0xd90b3b, flatShading: true });
+                        const text_material = new THREE.MeshBasicMaterial({ color: 0xd90b3b});
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set(pos.x, pos.y, pos.z);
                         text_mesh.lookAt(camera.position);
@@ -418,7 +418,7 @@ export async function activateAR() {
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
-                        const text_material = new THREE.MeshPhongMaterial({ color: 0x138fed, flatShading: true });
+                        const text_material = new THREE.MeshBasicMaterial({ color: 0x138fed });
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, (pts[0].z + pts[1].z) / 2);
                         text_mesh.lookAt(camera.position);
