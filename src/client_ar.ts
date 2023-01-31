@@ -216,8 +216,8 @@ export async function activateAR() {
                             height: 0.01,
                             curveSegments: 12,
                             bevelEnabled: true,
-                            bevelThickness: 0.01,
-                            bevelSize: 0.01,
+                            bevelThickness: 0.001,
+                            bevelSize: 0.001,
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
@@ -243,8 +243,8 @@ export async function activateAR() {
                             height: 0.01,
                             curveSegments: 12,
                             bevelEnabled: true,
-                            bevelThickness: 0.01,
-                            bevelSize: 0.01,
+                            bevelThickness: 0.001,
+                            bevelSize: 0.001,
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
