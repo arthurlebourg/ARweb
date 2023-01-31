@@ -369,12 +369,12 @@ export async function activateAR() {
                             height: 0.01,
                             curveSegments: 12,
                             bevelEnabled: true,
-                            bevelThickness: 0.01,
-                            bevelSize: 0.01,
+                            bevelThickness: 0.001,
+                            bevelSize: 0.001,
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
-                        const text_material = new THREE.MeshBasicMaterial({ color: 0xd90b3b});
+                        const text_material = new THREE.MeshBasicMaterial({ color: 0x2cb04f});
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set(pos.x, pos.y, pos.z);
                         text_mesh.lookAt(camera.position);
@@ -413,12 +413,12 @@ export async function activateAR() {
                             height: 0.01,
                             curveSegments: 12,
                             bevelEnabled: true,
-                            bevelThickness: 0.01,
-                            bevelSize: 0.01,
+                            bevelThickness: 0.001,
+                            bevelSize: 0.001,
                             bevelOffset: 0,
                             bevelSegments: 5
                         });
-                        const text_material = new THREE.MeshBasicMaterial({ color: 0x138fed });
+                        const text_material = new THREE.MeshBasicMaterial({ color: 0x2cb04f });
                         const text_mesh = new THREE.Mesh(text_geometry, text_material);
                         text_mesh.position.set((pts[0].x + pts[1].x) / 2, (pts[0].y + pts[1].y) / 2, (pts[0].z + pts[1].z) / 2);
                         text_mesh.lookAt(camera.position);
