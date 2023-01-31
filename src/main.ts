@@ -1,5 +1,5 @@
 import './style.css'
-import { activateAR, add_measure } from './client_ar';
+import { activateAR, add_measure, place_text } from './client_ar';
 import { place_object } from './client_ar';
 
 import { createApp } from 'vue';
@@ -123,6 +123,10 @@ async function start(isCaller: boolean, is_ar: boolean) {
       else if (selectedValue == "place") {
         dataChannel.send(JSON.stringify({ click: { x: x, y: y } }))
       }
+      else if (selectedValue == "write_text") {
+        let text = (document.getElementById('write_text_data') as HTMLInputElement ).value
+        dataChannel.send(JSON.stringify({ write_text: { x: x, y: y }, text: text }))
+      }
     }
 
     let constraints = {
@@ -153,6 +157,12 @@ async function start(isCaller: boolean, is_ar: boolean) {
       let y = data.add_measure.y;
       add_measure(x, y)
     }
+    else if (data.write_text) {
+      let x = data.write_text.x;
+      let y = data.write_text.y;
+      let text = data.text
+      place_text(x, y, text)
+    }
 
   }
   peerConnection.addStream(localStream);
@@ -160,7 +170,8 @@ async function start(isCaller: boolean, is_ar: boolean) {
   if (isCaller) {
     let desc = await peerConnection.createOffer().catch(errorHandler)//.then(createdDescription).catch(errorHandler);
     peerConnection.setLocalDescription(desc).then(function () {
-      var msg = JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid, 'is_ar': is_ar });
+      let call_name = (document.getElementById("call_name") as HTMLInputElement).value;
+      var msg = JSON.stringify({ 'sdp': peerConnection.localDescription, 'uuid': uuid, 'is_ar': is_ar, "call_name" : call_name});
       serverConnection.send(msg);
     }).catch(errorHandler);
   }
@@ -187,7 +198,7 @@ function gotMessageFromServer(message: any) {
       let button = document.createElement("input");
       button.type = "button";
       button.className = "start_button"
-      button.value = "Start call with " + signal.uuid + " with front camera video";
+      button.value = "Start call with " + signal.call_name + " with front camera video";
       button.id = signal.uuid;
       button.onclick = async () => {
         console.log("Sending offer to Peer.")
@@ -208,7 +219,7 @@ function gotMessageFromServer(message: any) {
         let button_ar = document.createElement("input");
         button_ar.type = "button";
         button_ar.className = "start_button"
-        button_ar.value = "Start call with " + signal.uuid + " with AR camera";
+        button_ar.value = "Start call with " + signal.call_name + " with AR camera";
         button_ar.onclick = async () => {
           await start(false, true)
           correspondant_uuid = signal.uuid;

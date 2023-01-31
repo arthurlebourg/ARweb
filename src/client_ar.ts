@@ -52,6 +52,17 @@ export function place_object(x_input : number, y_input : number)
     remote_place_object = true;
     remote_x = x_input;
     remote_y = y_input;
+    remote_text = "";
+}
+
+let remote_text : string = "";
+
+export function place_text(x_input : number, y_input : number, text : string)
+{
+    remote_place_object = true;
+    remote_x = x_input;
+    remote_y = y_input;
+    remote_text = text;
 }
 
 let measure_points : Array<number> = [];
@@ -91,14 +102,14 @@ export async function activateAR() {
     
     const small_ball_geometry = new THREE.SphereGeometry(0.025, 32, 32);
     const ball_geometry = new THREE.SphereGeometry(0.05, 32, 32);
-    const red_material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const red_material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
 
-    const yellow_material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const yellow_material = new THREE.MeshPhongMaterial({ color: 0xffff00 });
     const sphere = new THREE.Mesh(ball_geometry, red_material);
                 
 
     const circle_geometry = new THREE.CircleGeometry(0.05, 32);
-    const circle_material = new THREE.MeshBasicMaterial({ color: 0x16d94a });
+    const circle_material = new THREE.MeshPhongMaterial({ color: 0x16d94a });
     const circle = new THREE.Mesh(circle_geometry, circle_material);
 
     const canvas = document.createElement("canvas");
@@ -341,10 +352,35 @@ export async function activateAR() {
                 const depthInMeters = depthInfo.getDepthInMeters((remote_x + 1) / 2, (remote_y + 1) / 2);
 
                 let pos = unproject(remote_x, remote_y, view, depthInMeters);
-                let new_sphere = sphere.clone();
-                new_sphere.position.copy(pos)
 
-                scene.add(new_sphere);
+                if (remote_text == "")
+                {
+                    let new_sphere = sphere.clone();
+                    new_sphere.position.copy(pos)
+
+                    scene.add(new_sphere);
+                }
+                else
+                {
+                    font_loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font: Font) {
+                        const text_geometry = new TextGeometry(remote_text, {
+                            font: font,
+                            size: 0.05,
+                            height: 0.01,
+                            curveSegments: 12,
+                            bevelEnabled: true,
+                            bevelThickness: 0.01,
+                            bevelSize: 0.01,
+                            bevelOffset: 0,
+                            bevelSegments: 5
+                        });
+                        const text_material = new THREE.MeshPhongMaterial({ color: 0xd90b3b, flatShading: true });
+                        const text_mesh = new THREE.Mesh(text_geometry, text_material);
+                        text_mesh.position.set(pos.x, pos.y, pos.z);
+                        text_mesh.lookAt(camera.position);
+                        scene.add(text_mesh);
+                    });
+                }
             }
 
             if (add_measure_point)
