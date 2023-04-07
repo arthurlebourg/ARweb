@@ -1,61 +1,70 @@
-// server.js
 import express from 'express';
 import path, { resolve } from 'path';
 import serveStatic from 'serve-static';
-//import bodyParser from 'body-parser';
 import * as WebSocket from 'ws';
 import { createServer } from 'https';
 import fs from 'fs';
 
-var app = express();
+const app = express();
 
-var __dirname = path.resolve();
+const __dirname = path.resolve();
 
-// Yes, TLS is required
-const serverConfig = {
-    key: fs.readFileSync(resolve(__dirname, 'certifications/privkey.pem')),
-    cert: fs.readFileSync(resolve(__dirname, 'certifications/fullchain.pem'))
+// config TLS for https
+const TLSconfig = {
+    key: fs.readFileSync(resolve(__dirname, 'certs', 'privkey.pem')),
+    cert: fs.readFileSync(resolve(__dirname, 'certs', 'cert.cer'))
 };
 
 app.use(serveStatic(__dirname + "/dist"));
-//app.use(bodyParser.json());
 
-const server = createServer(serverConfig, app);
+const server = createServer(TLSconfig, app);
 
 const wss = new WebSocket.WebSocketServer({ server });
 
-console.log('Websocket server started');
-
-//make map client uid
-var clients = new Map();
+const clients = new Map();
 
 wss.on('connection', function (ws) {
-    console.log('Client connected');
+    console.log('client connected');
 
-    for (var [key, value] of clients) {
-        var data = JSON.parse(key);
-        if (data['sdp']['type'] == 'offer')
-        {
-            wss.broadcast(key);
+    for (const [key, value] of clients) {
+        const data = JSON.parse(key);
+        if (data['sdp']['type'] == 'offer') {
+            ws.send(key.toString());
         }
     }
 
-    ws.on('message', function (message) {
-        //console.log('received: %s', message);
-        var data = JSON.parse(message);
+    ws.on('open', function () {
+        console.log("socket opened");
+    });
 
-        if (data['offer_removed']) {
+    ws.on('close', function () {
+        console.log('client disconnected');
+        for (const [key, value] of clients) {
+            if (value == ws) {
+                clients.delete(key);
+                const msg = JSON.stringify({ 'uuid': JSON.parse(key)['uuid'], 'offer_removed': true });
+                console.log('Offer removed from ' + JSON.parse(key)['uuid'] + ' by disconnection');
+                wss.broadcast(msg);
+                break;
+            }
+        }
+    });
+
+    ws.on('message', function (message) {
+        const data = JSON.parse(message);
+
+        if (data && data['offer_removed']) {
             console.log('Offer removed from ' + data['uuid']);
-            for (var [key, value] of clients) {
+            for (const [key, value] of clients) {
                 if (value == ws) {
                     clients.delete(key);
                     wss.broadcast(message);
+                    console.log('Offer removed from ' + JSON.parse(key)['uuid'] + ' by offer_removed');
                     break;
                 }
             }
         }
-
-        if (data['sdp']) {
+        else if (data && data['sdp']) {
             if (data['sdp']['type'] == 'offer') {
                 console.log('Received offer from ' + data['uuid']);
                 clients.set(message, ws);
@@ -64,9 +73,9 @@ wss.on('connection', function (ws) {
             else if (data['sdp']['type'] == 'answer') {
                 console.log('Received answer from ' + data['uuid']);
                 clients.set(message, ws);
-                for (var [key, value] of clients) {
-                    var data2 = JSON.parse(key);
-                    if (data2['uuid'] == data['aimed_uuid']) {
+                for (const [key, value] of clients) {
+                    const data2 = JSON.parse(key);
+                    if (data2['uuid'] == data['target_uuid']) {
                         value.send(message.toString());
                         //clients.delete(key);
                         break;
@@ -74,27 +83,18 @@ wss.on('connection', function (ws) {
                 }
             }
         }
-        else if (data['ice']) {
-            for (var [key, value] of clients) {
-                var data2 = JSON.parse(key);
-                if (data2['uuid'] == data['aimed_uuid']) {
-                    console.log('Send ICE to ' + data['aimed_uuid']);
+        else if (data && data['ice']) {
+            for (const [key, value] of clients) {
+                const data2 = JSON.parse(key);
+                if (data2['uuid'] == data['target_uuid']) {
+                    console.log('Send ICE to ' + data['target_uuid']);
                     value.send(message.toString());
                     break;
                 }
             }
         }
-    });
-
-    ws.on('close', function () {
-        console.log('Client disconnected');
-        for (var [key, value] of clients) {
-            if (value == ws) {
-                clients.delete(key);
-                var msg = JSON.stringify({'uuid': JSON.parse(key)['uuid'], 'offer_removed': true});
-                wss.broadcast(msg);
-                break;
-            }
+        else if (data && data['log']) {
+            console.log(data['log'])
         }
     });
 });
